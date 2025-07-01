@@ -5,15 +5,7 @@
   <title>SmartCart</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js">
-    async function iniciarCamera() {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      video.srcObject = stream;
-    }
-
-    iniciarCamera().then(loopOCR);
-    </script>
-    
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
   <style>
     body {
       margin: 0;
@@ -188,28 +180,27 @@
 
       const imageData = context.getImageData(focoX, focoY, focoLarg, focoAlt);
       const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = focoLarg;
-      tempCanvas.height = focoAlt;
-      tempCanvas.getContext('2d').putImageData(imageData, 0, 0);
-
-      
-      const tempCanvas = document.createElement('canvas');
       tempCanvas.width = focoLarg * 0.8;
       tempCanvas.height = focoAlt * 0.8;
       const tempCtx = tempCanvas.getContext('2d');
-      tempCtx.drawImage(canvas, focoX, focoY, focoLarg, focoAlt, 0, 0, tempCanvas.width, tempCanvas.height);
+      tempCtx.putImageData(imageData, 0, 0);
 
-      // Grayscale
-      const imgData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+      // Reduzir e aplicar grayscale
+      const resized = document.createElement('canvas');
+      resized.width = tempCanvas.width;
+      resized.height = tempCanvas.height;
+      const resizedCtx = resized.getContext('2d');
+      resizedCtx.drawImage(tempCanvas, 0, 0, resized.width, resized.height);
+
+      const imgData = resizedCtx.getImageData(0, 0, resized.width, resized.height);
       const data = imgData.data;
       for (let i = 0; i < data.length; i += 4) {
         const avg = (data[i] + data[i+1] + data[i+2]) / 3;
         data[i] = data[i+1] = data[i+2] = avg;
       }
-      tempCtx.putImageData(imgData, 0, 0);
+      resizedCtx.putImageData(imgData, 0, 0);
 
-      tempCanvas.toBlob(async (blob) => {
-
+      resized.toBlob(async (blob) => {
         const { data: { text } } = await Tesseract.recognize(blob, 'por');
         const resultado = detectarMelhoresNomes(text);
 
@@ -307,14 +298,6 @@
     }
 
     iniciarCamera().then(loopOCR);
-  
-    async function iniciarCamera() {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      video.srcObject = stream;
-    }
-
-    iniciarCamera().then(loopOCR);
-    </script>
-    
+  </script>
 </body>
 </html>
