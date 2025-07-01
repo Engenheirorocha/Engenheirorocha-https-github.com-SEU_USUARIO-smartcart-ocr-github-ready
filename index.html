@@ -5,7 +5,15 @@
   <title>SmartCart</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js">
+    async function iniciarCamera() {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      video.srcObject = stream;
+    }
+
+    iniciarCamera().then(loopOCR);
+    </script>
+    
   <style>
     body {
       margin: 0;
@@ -299,6 +307,14 @@
     }
 
     iniciarCamera().then(loopOCR);
-  </script>
+  
+    async function iniciarCamera() {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      video.srcObject = stream;
+    }
+
+    iniciarCamera().then(loopOCR);
+    </script>
+    
 </body>
 </html>
