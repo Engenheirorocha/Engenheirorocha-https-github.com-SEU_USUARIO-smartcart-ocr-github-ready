@@ -123,7 +123,7 @@
 
     async function iniciarCamera() {
       const video = document.getElementById('video');
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } });
       video.srcObject = stream;
 
       setInterval(() => iniciarOCR(video), 3000); // Captura a cada 3 segundos
