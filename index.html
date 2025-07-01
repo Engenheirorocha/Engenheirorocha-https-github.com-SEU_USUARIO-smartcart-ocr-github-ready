@@ -2,138 +2,286 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>SmartCart OCR Único</title>
+  <title>SmartCart</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
   <style>
-    body { font-family: sans-serif; text-align: center; }
-    video { width: 90%; max-width: 500px; border-radius: 10px; }
-    #cameraContainer { position: relative; display: inline-block; }
-    #retangulo {
-      position: absolute; top: 50%; left: 50%;
-      width: 60%; height: 30%;
-      transform: translate(-50%, -50%);
-      border: 2px solid red; border-radius: 10px;
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background-color: #0d1b2a;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-bottom: 40px;
+    }
+
+    header {
+      margin-top: 16px;
+      margin-bottom: 10px;
+    }
+
+    #totalSuperior {
+      font-size: 3.2rem;
+      font-weight: bold;
+      color: #00ffea;
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 2.2rem;
+      color: #00b4d8;
+      text-align: center;
+      margin: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h2::before {
+      content: '🛒';
+      font-size: 1.8rem;
+    }
+
+    #cameraContainer {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      margin-top: 10px;
+    }
+
+    video, canvas {
+      width: 100%;
+      border-radius: 10px;
+    }
+
+    #focusBox {
+      position: absolute;
+      top: 33%;
+      left: 7.5%;
+      width: 85%;
+      height: 34%;
+      border: 3px dashed #00ffcc;
       pointer-events: none;
     }
-    li {
-      margin: 10px auto;
-      padding: 12px;
-      background: #eee;
-      border-radius: 10px;
-      max-width: 90%;
-      font-size: 18px;
-    }
-    button {
-      margin: 8px 10px;
-      padding: 12px 20px;
-      font-size: 18px;
-      border: none;
+
+    .resultado, .lista {
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #00ffcc;
       border-radius: 8px;
-      background-color: #4CAF50;
-      color: white;
+      width: 90%;
+      max-width: 420px;
+      background-color: #1b263b;
+    }
+
+    .opcao {
+      background: #102030;
+      border: 1px solid #00ffcc;
+      border-radius: 10px;
+      margin: 12px 0;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .opcao strong {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 1.2rem;
+    }
+
+    button {
+      background: #00ffcc;
+      border: none;
+      color: #000;
+      padding: 16px 24px;
+      font-weight: bold;
+      font-size: 1.4rem;
+      border-radius: 8px;
       cursor: pointer;
+      width: 100%;
+      margin-top: 10px;
     }
+
     button:hover {
-      background-color: #45a049;
+      background: #00e6b2;
     }
-    button.excluir {
-      background-color: #f44336;
+
+    ul {
+      list-style: none;
+      padding: 0;
+      font-size: 1.1rem;
     }
-    button.excluir:hover {
-      background-color: #d32f2f;
+
+    li {
+      margin-bottom: 10px;
+    }
+
+    #totalResumo {
+      font-weight: bold;
+      color: #00ffaa;
+      font-size: 1.2rem;
+      margin-top: 15px;
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.5/dist/tesseract.min.js"></script>
 </head>
+
 <body>
-  <h1>SmartCart OCR Único</h1>
+  <header>
+    <h1>🛒 SmartCart</h1>
+    <div id="totalSuperior">🧾 R$ 0,00</div>
+  </header>
+
   <div id="cameraContainer">
-    <video id="camera" autoplay playsinline></video>
-    <div id="retangulo"></div>
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <div id="focusBox"></div>
   </div>
-  <canvas id="canvas" style="display:none;"></canvas>
-  <h3>Total: R$ <span id="total">0.00</span></h3>
-  <ul id="lista"></ul>
+
+  <div id="resultado" class="resultado" style="display:none;"></div>
+
+  <div id="listaProdutos" class="lista" style="display:none;">
+    <h3>🛒 Produtos Adicionados</h3>
+    <ul id="produtos"></ul>
+    <p id="totalResumo">🧾 Total: R$ 0,00</p>
+  </div>
 
   <script>
-    const video = document.getElementById("camera");
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    const lista = document.getElementById("lista");
-    const totalDisplay = document.getElementById("total");
-
-    let total = 0;
-    let lidos = [];
     let ocrAtivo = true;
+    let produtosConfirmados = [];
+    let total = 0;
 
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-      .then(stream => video.srcObject = stream)
-      .catch(err => alert("Erro: " + err));
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const resultadoDiv = document.getElementById('resultado');
+    const listaDiv = document.getElementById('listaProdutos');
+    const listaUL = document.getElementById('produtos');
+    const totalResumo = document.getElementById('totalResumo');
+    const totalSuperior = document.getElementById('totalSuperior');
+    const context = canvas.getContext('2d');
 
-    function capturaOCRPrecos() {
-      if (!video.videoWidth || !ocrAtivo) return;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-
-      const rw = canvas.width * 0.6;
-      const rh = canvas.height * 0.3;
-      const rx = (canvas.width - rw) / 2;
-      const ry = (canvas.height - rh) / 2;
-
-      ctx.drawImage(video, rx, ry, rw, rh, 0, 0, rw, rh);
-
-      ocrAtivo = false;
-
-      Tesseract.recognize(canvas, 'por', { logger: m => console.log(m) })
-        .then(({ data: { text } }) => {
-          const regex = /(?:R\$|R\s*\$)?\s*(\d{1,3}(?:[\.,]\d{2})?)/gi;
-          let precos = {};
-          let match;
-          while ((match = regex.exec(text)) !== null) {
-            let preco = parseFloat(match[1].replace(',', '.'));
-            if (!isNaN(preco)) {
-              preco = parseFloat(preco.toFixed(2));
-              precos[preco] = (precos[preco] || 0) + 1;
-            }
-          }
-          const top = Object.entries(precos).sort((a,b)=>b[1]-a[1]);
-          if (top.length > 0) {
-            const preco = parseFloat(top[0][0]);
-            if (!lidos.includes(preco)) {
-              const li = document.createElement("li");
-              const btnAdd = document.createElement("button");
-              const btnDel = document.createElement("button");
-
-              btnAdd.textContent = `✔️ Adicionar R$ ${preco.toFixed(2)}`;
-              btnAdd.onclick = () => {
-                total += preco;
-                totalDisplay.textContent = total.toFixed(2);
-                lidos.push(preco);
-                li.remove();
-                ocrAtivo = true;
-              };
-
-              btnDel.textContent = "❌ Excluir";
-              btnDel.className = "excluir";
-              btnDel.onclick = () => {
-                li.remove();
-                ocrAtivo = true;
-              };
-
-              li.appendChild(document.createTextNode("Produto detectado "));
-              li.appendChild(btnAdd);
-              li.appendChild(btnDel);
-              lista.appendChild(li);
-            } else {
-              ocrAtivo = true;
-            }
-          } else {
-            ocrAtivo = true;
-          }
-        })
-        .catch(() => ocrAtivo = true);
+    async function iniciarCamera() {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      video.srcObject = stream;
     }
 
-    setInterval(capturaOCRPrecos, 2000);
+    async function processarOCR() {
+      if (!ocrAtivo || !video.videoWidth || !video.videoHeight) return;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const focoY = canvas.height * 0.4;
+      const focoAlt = canvas.height * 0.2;
+      const focoX = 0;
+      const focoLarg = canvas.width;
+
+      const imageData = context.getImageData(focoX, focoY, focoLarg, focoAlt);
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = focoLarg;
+      tempCanvas.height = focoAlt;
+      tempCanvas.getContext('2d').putImageData(imageData, 0, 0);
+
+      tempCanvas.toBlob(async (blob) => {
+        const { data: { text } } = await Tesseract.recognize(blob, 'por');
+        const resultado = detectarMelhoresNomes(text);
+
+        if (!resultado.preco) {
+          ocrAtivo = true;
+          return;
+        }
+
+        ocrAtivo = false;
+        let html = `<strong>💰 Preço:</strong> R$ ${resultado.preco.toFixed(2).replace('.', ',')}<br><br>`;
+        resultado.opcoes.forEach(op => {
+          html += `
+            <div class="opcao">
+              <strong>${op.texto}</strong>
+              <button onclick="confirmarProduto('${op.texto}', ${resultado.preco})">Adicionar</button>
+            </div>
+          `;
+        });
+
+        html += `<button onclick="excluirProduto()">Excluir</button>`;
+        resultadoDiv.innerHTML = html;
+        resultadoDiv.style.display = 'block';
+      });
+    }
+
+    function detectarMelhoresNomes(textoOCR) {
+      const linhas = textoOCR.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const palavrasBanidas = ['val', 'validade', 'promoção', 'data', 'expira', 'venc', 'fabric', 'leve'];
+      const marcas = ['Italac', 'Tio João', 'Ninho', 'Qualitá', 'Sadia', 'Nestlé'];
+      const unidades = ['kg', 'g', 'ml', 'l', 'L', 'un', 'und'];
+      const opcoes = [];
+      const precosDetectados = [];
+
+      for (const linha of linhas) {
+        const linhaLimpa = linha.toLowerCase();
+        const temPreco = /(r\$\s*|por\s*|preço\s*)?\d{1,3}[.,]\d{2}/.test(linhaLimpa);
+        const precos = linha.match(/(r\$\s?)?(\d{1,3}[.,]\d{2})/gi);
+
+        if (precos && temPreco && !palavrasBanidas.some(p => linhaLimpa.includes(p))) {
+          precos.forEach(p => {
+            const num = p.replace(/[^0-9,.]/g, '').replace(',', '.');
+            const val = parseFloat(num);
+            if (val > 0.5 && val < 500) precosDetectados.push(val);
+          });
+        }
+
+        let pontos = 0;
+        const palavras = linha.split(' ');
+        if (palavras.length >= 2) pontos += 2;
+        if (marcas.some(m => linha.includes(m))) pontos += 3;
+        if (unidades.some(u => linhaLimpa.includes(u))) pontos += 2;
+        if (!palavrasBanidas.some(p => linhaLimpa.includes(p))) pontos += 2;
+        if (linha === linha.toUpperCase()) pontos += 2;
+        if (linha.length > 12) pontos += 1;
+
+        opcoes.push({ texto: linha, pontos });
+      }
+
+      opcoes.sort((a, b) => b.pontos - a.pontos);
+      const precoFinal = Math.max(...precosDetectados);
+      return {
+        opcoes: opcoes.length > 0 ? [opcoes[0]] : [],
+        preco: isFinite(precoFinal) ? parseFloat(precoFinal.toFixed(2)) : null
+      };
+    }
+
+    function confirmarProduto(nome, preco) {
+      produtosConfirmados.push({ nome, preco });
+      total += preco;
+      atualizarLista();
+      resultadoDiv.style.display = 'none';
+      ocrAtivo = true;
+    }
+
+    function excluirProduto() {
+      resultadoDiv.style.display = 'none';
+      ocrAtivo = true;
+    }
+
+    function atualizarLista() {
+      listaUL.innerHTML = '';
+      produtosConfirmados.forEach(p => {
+        const item = document.createElement('li');
+        item.textContent = `${p.nome} – R$ ${p.preco.toFixed(2).replace('.', ',')}`;
+        listaUL.appendChild(item);
+      });
+      totalResumo.textContent = `🧾 Total: R$ ${total.toFixed(2).replace('.', ',')}`;
+      totalSuperior.textContent = `🧾 R$ ${total.toFixed(2).replace('.', ',')}`;
+      listaDiv.style.display = 'block';
+    }
+
+    async function loopOCR() {
+      await processarOCR();
+      setTimeout(loopOCR, 2000);
+    }
+
+    iniciarCamera().then(loopOCR);
   </script>
 </body>
 </html>
