@@ -1,130 +1,297 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SmartCart OCR</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js">
+// Envio ao Firebase após detectar preços
+async function enviarParaFirebase(base64Image, preco) {
+  const local = await new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve({ lat: null, lng: null })
+    );
+  });
+
+  const data = {
+    preco: preco,
+    imagem: base64Image,
+    dataHora: new Date().toISOString(),
+    localizacao: local
+  };
+
+  try {
+    await db.collection("leituras").add(data);
+    console.log("✅ Dados enviados ao Firebase:", data);
+  } catch (error) {
+    console.error("❌ Erro ao enviar ao Firebase:", error);
+  }
+}
+
+async function capturarEEnviarImagem(valorDetectado) {
+  try {
+    let canvasTemp = document.createElement('canvas');
+    canvasTemp.width = video.videoWidth;
+    canvasTemp.height = video.videoHeight;
+    let ctx = canvasTemp.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvasTemp.width, canvasTemp.height);
+    const base64Image = canvasTemp.toDataURL('image/jpeg', 0.7);
+    await enviarParaFirebase(base64Image, valorDetectado);
+  } catch (e) {
+    console.error("Erro na captura ou envio da imagem:", e);
+  }
+}
+
+</script>
   <style>
     body {
-      font-family: 'Poppins', sans-serif;
-      margin: 0;
-      background-color: #121212;
-      color: #ffffff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 16px;
-    }
-    h1 {
-      font-weight: 500;
-      margin-bottom: 10px;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #121212;
+      color: #FFFFFF;
     }
     .container {
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: 100%;
-      max-width: 480px;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 20px;
     }
     video {
       width: 100%;
-      border-radius: 12px;
-    }
-    canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      pointer-events: none;
+      max-width: 400px;
+      border-radius: 10px;
+      margin-bottom: 10px;
     }
     #overlay {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
-      height: 100%;
+      max-width: 400px;
+      height: auto;
       pointer-events: none;
-
-      width: 100%;
-      max-width: 480px;
-      position: absolute;
-    }
-    .loading {
-      margin-top: 10px;
-      font-size: 14px;
-      color: #bbb;
     }
     #precos {
-      margin-top: 16px;
       display: flex;
       flex-direction: column;
       gap: 10px;
-      width: 100%;
+      max-height: 500px;
+      overflow-y: auto;
     }
     .preco-btn {
-      background: #1E88E5;
+      font-size: 1.464em;
+      padding: 12.2px 24.4px;
+      background: #4CAF50;
       color: white;
       border: none;
       border-radius: 8px;
-      padding: 14px;
-      font-size: 1.2em;
-      font-weight: 500;
       cursor: pointer;
-      transition: transform 0.2s, background 0.3s;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: none;
+      transition: transform 0.2s ease;
     }
-    .preco-btn:hover {
-      transform: scale(1.04);
-      background: #1565C0;
+    .preco-btn.pulse {
+      transform: scale(1.1);
     }
-    .preco-btn:active {
-      transform: scale(0.98);
-    }
-    #total {
-      font-size: 1.8em;
-      margin-top: 20px;
-      color: #81C784;
-      font-weight: 600;
+    .lixeira {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: red;
+      border-radius: 50%;
+      color: white;
+      font-size: 0.8em;
+      cursor: pointer;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .btn-controle {
-      margin-top: 10px;
-      display: flex;
-      gap: 10px;
+      margin-top: 15px;
     }
     .btn-controle button {
-      flex: 1;
-      background: #EF5350;
-      border: none;
+      background: #FF5252;
       color: white;
-      padding: 10px;
+      border: none;
+      padding: 10px 20px;
       border-radius: 8px;
       font-size: 1em;
       cursor: pointer;
     }
+    #total {
+      font-size: 2em;
+      margin-top: 20px;
+      color: #81C784;
+    }
   </style>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+// Envio ao Firebase após detectar preços
+async function enviarParaFirebase(base64Image, preco) {
+  const local = await new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve({ lat: null, lng: null })
+    );
+  });
+
+  const data = {
+    preco: preco,
+    imagem: base64Image,
+    dataHora: new Date().toISOString(),
+    localizacao: local
+  };
+
+  try {
+    await db.collection("leituras").add(data);
+    console.log("✅ Dados enviados ao Firebase:", data);
+  } catch (error) {
+    console.error("❌ Erro ao enviar ao Firebase:", error);
+  }
+}
+
+async function capturarEEnviarImagem(valorDetectado) {
+  try {
+    let canvasTemp = document.createElement('canvas');
+    canvasTemp.width = video.videoWidth;
+    canvasTemp.height = video.videoHeight;
+    let ctx = canvasTemp.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvasTemp.width, canvasTemp.height);
+    const base64Image = canvasTemp.toDataURL('image/jpeg', 0.7);
+    await enviarParaFirebase(base64Image, valorDetectado);
+  } catch (e) {
+    console.error("Erro na captura ou envio da imagem:", e);
+  }
+}
+
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js">
+// Envio ao Firebase após detectar preços
+async function enviarParaFirebase(base64Image, preco) {
+  const local = await new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve({ lat: null, lng: null })
+    );
+  });
+
+  const data = {
+    preco: preco,
+    imagem: base64Image,
+    dataHora: new Date().toISOString(),
+    localizacao: local
+  };
+
+  try {
+    await db.collection("leituras").add(data);
+    console.log("✅ Dados enviados ao Firebase:", data);
+  } catch (error) {
+    console.error("❌ Erro ao enviar ao Firebase:", error);
+  }
+}
+
+async function capturarEEnviarImagem(valorDetectado) {
+  try {
+    let canvasTemp = document.createElement('canvas');
+    canvasTemp.width = video.videoWidth;
+    canvasTemp.height = video.videoHeight;
+    let ctx = canvasTemp.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvasTemp.width, canvasTemp.height);
+    const base64Image = canvasTemp.toDataURL('image/jpeg', 0.7);
+    await enviarParaFirebase(base64Image, valorDetectado);
+  } catch (e) {
+    console.error("Erro na captura ou envio da imagem:", e);
+  }
+}
+
+</script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAfhmfxYmQOgO3ACrCHeNZx83khMrDUD8U",
+    authDomain: "smartcart-app-dc796.firebaseapp.com",
+    projectId: "smartcart-app-dc796",
+    storageBucket: "smartcart-app-dc796.appspot.com",
+    messagingSenderId: "903830223010",
+    appId: "1:903830223010:web:9241e79644d2039c3e7ffb"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+// Envio ao Firebase após detectar preços
+async function enviarParaFirebase(base64Image, preco) {
+  const local = await new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve({ lat: null, lng: null })
+    );
+  });
+
+  const data = {
+    preco: preco,
+    imagem: base64Image,
+    dataHora: new Date().toISOString(),
+    localizacao: local
+  };
+
+  try {
+    await db.collection("leituras").add(data);
+    console.log("✅ Dados enviados ao Firebase:", data);
+  } catch (error) {
+    console.error("❌ Erro ao enviar ao Firebase:", error);
+  }
+}
+
+async function capturarEEnviarImagem(valorDetectado) {
+  try {
+    let canvasTemp = document.createElement('canvas');
+    canvasTemp.width = video.videoWidth;
+    canvasTemp.height = video.videoHeight;
+    let ctx = canvasTemp.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvasTemp.width, canvasTemp.height);
+    const base64Image = canvasTemp.toDataURL('image/jpeg', 0.7);
+    await enviarParaFirebase(base64Image, valorDetectado);
+  } catch (e) {
+    console.error("Erro na captura ou envio da imagem:", e);
+  }
+}
+
+</script>
+
 </head>
 <body>
-  <h1>SmartCart</h1>
+  <h1>SmartCart OCR</h1>
   <div class="container">
-    <video id="video" autoplay playsinline></video>
-    <canvas id="overlay"></canvas>
-    <div class="loading" id="loading">Aguardando leitura do preço...</div>
-    <div id="precos"></div>
-    <div class="btn-controle">
-      <button onclick="limparSugestoes()">❌ Apagar sugestões</button>
-      <button onclick="desfazerUltimo()">↩️ Desfazer último</button>
+    <div style="position: relative;">
+      <video id="video" autoplay playsinline></video>
+      <canvas id="overlay"></canvas>
     </div>
-    <div id="total">Total: R$ <span id="soma">0.00</span></div>
+    <div>
+      <div id="precos"></div>
+      <div class="btn-controle">
+        <button onclick="limparSugestoes()">❌ Apagar sugestões</button>
+        <button onclick="desfazerUltimo()">↩️ Desfazer último</button>
+      </div>
+    </div>
   </div>
+  <div id="total">Total: R$ <span id="soma">0.00</span></div>
+
+  <audio id="bip-audio" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
 
   <script>
     const video = document.getElementById('video');
     const overlay = document.getElementById('overlay');
-    const ctxOverlay = overlay.getContext('2d');
     const precosDiv = document.getElementById('precos');
     const somaSpan = document.getElementById('soma');
-    const loading = document.getElementById('loading');
+    const bip = document.getElementById('bip-audio');
     let total = 0;
     let canvas = document.createElement('canvas');
     let isProcessing = false;
@@ -143,29 +310,24 @@
       }
     }
 
-    function desenharROI() {
-      overlay.width = video.videoWidth;
-      overlay.height = video.videoHeight;
-      ctxOverlay.clearRect(0, 0, overlay.width, overlay.height);
-      const w = overlay.width * 0.5;
-      const h = overlay.height * 0.2;
-      const x = (overlay.width - w) / 2;
-      const y = (overlay.height - h) / 2;
-      ctxOverlay.strokeStyle = 'red';
-      ctxOverlay.lineWidth = 2;
-      ctxOverlay.strokeRect(x, y, w, h);
-    }
-
-    function adicionarPreco(valor) {
+    function adicionarPreco(valor, btn) {
       total += valor;
       ultimoValor = valor;
       somaSpan.innerText = total.toFixed(2);
       limparSugestoes();
       sugestoesFixas = false;
+      bip.play();
+      if (btn) {
+        btn.classList.add('pulse');
+        setTimeout(() => btn.classList.remove('pulse'), 300);
+      }
     }
 
-    function limparSugestoes() {
-      precosDiv.innerHTML = '';
+    function removerPreco(btn, valor) {
+      total -= valor;
+      if (total < 0) total = 0;
+      somaSpan.innerText = total.toFixed(2);
+      btn.remove();
     }
 
     function desfazerUltimo() {
@@ -177,10 +339,28 @@
       }
     }
 
+    function limparSugestoes() {
+      precosDiv.innerHTML = '';
+      sugestoesFixas = false;
+    }
+
+    function desenharROI() {
+      const ctx = overlay.getContext('2d');
+      overlay.width = video.videoWidth;
+      overlay.height = video.videoHeight;
+      ctx.clearRect(0, 0, overlay.width, overlay.height);
+      const w = overlay.width * 0.5;
+      const h = overlay.height * 0.2;
+      const x = (overlay.width - w) / 2;
+      const y = (overlay.height - h) / 2;
+      ctx.strokeStyle = 'red';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x, y, w, h);
+    }
+
     async function capturarImagemEProcessar() {
       if (isProcessing || video.videoWidth === 0 || sugestoesFixas) return;
       isProcessing = true;
-      loading.innerText = "Processando imagem...";
       desenharROI();
 
       const ctx = canvas.getContext('2d');
@@ -193,8 +373,19 @@
       canvas.height = roiHeight;
       ctx.drawImage(video, roiX, roiY, roiWidth, roiHeight, 0, 0, roiWidth, roiHeight);
 
+      let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < imageData.data.length; i += 4) {
+        let avg = (imageData.data[i] + imageData.data[i + 1] + imageData.data[i + 2]) / 3;
+        let bin = avg > 128 ? 255 : 0;
+        imageData.data[i] = bin;
+        imageData.data[i + 1] = bin;
+        imageData.data[i + 2] = bin;
+      }
+      ctx.putImageData(imageData, 0, 0);
+
       const { data: { text } } = await Tesseract.recognize(canvas, 'eng', {
-        tessedit_char_whitelist: '0123456789.,'
+        tessedit_char_whitelist: '0123456789.,',
+        tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK
       });
 
       const matches = text.match(/\d{1,3}(?:[.,]\d{2})/g);
@@ -206,19 +397,60 @@
             const btn = document.createElement('div');
             btn.className = 'preco-btn';
             btn.innerText = `R$ ${valor.toFixed(2)}`;
-            btn.onclick = () => adicionarPreco(valor);
+            btn.onclick = () => {
+      adicionarPreco(valor, btn);
+      capturarEEnviarImagem(valor);
+    };
             precosDiv.appendChild(btn);
           }
         });
         sugestoesFixas = true;
       }
 
-      loading.innerText = "Aguardando leitura do preço...";
       isProcessing = false;
     }
 
     setInterval(capturarImagemEProcessar, 2000);
     iniciarCamera();
-  </script>
+  
+// Envio ao Firebase após detectar preços
+async function enviarParaFirebase(base64Image, preco) {
+  const local = await new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve({ lat: null, lng: null })
+    );
+  });
+
+  const data = {
+    preco: preco,
+    imagem: base64Image,
+    dataHora: new Date().toISOString(),
+    localizacao: local
+  };
+
+  try {
+    await db.collection("leituras").add(data);
+    console.log("✅ Dados enviados ao Firebase:", data);
+  } catch (error) {
+    console.error("❌ Erro ao enviar ao Firebase:", error);
+  }
+}
+
+async function capturarEEnviarImagem(valorDetectado) {
+  try {
+    let canvasTemp = document.createElement('canvas');
+    canvasTemp.width = video.videoWidth;
+    canvasTemp.height = video.videoHeight;
+    let ctx = canvasTemp.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvasTemp.width, canvasTemp.height);
+    const base64Image = canvasTemp.toDataURL('image/jpeg', 0.7);
+    await enviarParaFirebase(base64Image, valorDetectado);
+  } catch (e) {
+    console.error("Erro na captura ou envio da imagem:", e);
+  }
+}
+
+</script>
 </body>
 </html>
