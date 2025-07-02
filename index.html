@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -99,6 +98,7 @@
     </div>
   </div>
   <div id="total">Total: R$ <span id="soma">0.00</span></div>
+
   <audio id="bip-audio" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
 
   <script>
@@ -121,7 +121,7 @@
     let total = 0;
     let canvas = document.createElement('canvas');
     let isProcessing = false;
-    let ultimoValor = null;
+    let valoresAdicionados = [];
     let sugestoesFixas = false;
 
     async function iniciarCamera() {
@@ -151,23 +151,9 @@
       ctx.strokeRect(x, y, w, h);
     }
 
-    function adicionarManual() {
-      const input = document.getElementById('manualInput');
-      const valor = parseFloat(input.value.replace(',', '.'));
-      if (isNaN(valor) || valor <= 0) {
-        alert("Digite um valor válido.");
-        return;
-      }
-      total += valor;
-      ultimoValor = valor;
-      somaSpan.innerText = total.toFixed(2);
-      bip.play();
-      input.value = '';
-    }
-
     function adicionarPreco(valor, btn) {
       total += valor;
-      ultimoValor = valor;
+      valoresAdicionados.push(valor);
       somaSpan.innerText = total.toFixed(2);
       limparSugestoes();
       sugestoesFixas = false;
@@ -176,21 +162,32 @@
         btn.classList.add('pulse');
         setTimeout(() => btn.classList.remove('pulse'), 300);
       }
+      capturarEEnviarImagem(valor);
     }
 
-    function removerPreco(btn, valor) {
-      total -= valor;
-      if (total < 0) total = 0;
+    function adicionarManual() {
+      const input = document.getElementById('manualInput');
+      const valor = parseFloat(input.value.replace(',', '.'));
+      if (isNaN(valor) || valor <= 0) {
+        alert("Digite um valor válido.");
+        return;
+      }
+
+      total += valor;
+      valoresAdicionados.push(valor);
       somaSpan.innerText = total.toFixed(2);
-      btn.remove();
+      limparSugestoes();
+      sugestoesFixas = false;
+      bip.play();
+      input.value = '';
     }
 
     function desfazerUltimo() {
-      if (ultimoValor !== null) {
-        total -= ultimoValor;
+      if (valoresAdicionados.length > 0) {
+        const valor = valoresAdicionados.pop();
+        total -= valor;
         if (total < 0) total = 0;
         somaSpan.innerText = total.toFixed(2);
-        ultimoValor = null;
       }
     }
 
@@ -213,19 +210,7 @@
       canvas.height = roiHeight;
       ctx.drawImage(video, roiX, roiY, roiWidth, roiHeight, 0, 0, roiWidth, roiHeight);
 
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      for (let i = 0; i < imageData.data.length; i += 4) {
-        let avg = (imageData.data[i] + imageData.data[i+1] + imageData.data[i+2]) / 3;
-        let bin = avg > 128 ? 255 : 0;
-        imageData.data[i] = imageData.data[i+1] = imageData.data[i+2] = bin;
-      }
-      ctx.putImageData(imageData, 0, 0);
-
-      const { data: { text } } = await Tesseract.recognize(canvas, 'eng', {
-        tessedit_char_whitelist: '0123456789.,',
-        tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK
-      });
-
+      const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
       const matches = text.match(/\d{1,3}(?:[.,]\d{2})/g);
       if (matches) {
         limparSugestoes();
@@ -242,6 +227,26 @@
         sugestoesFixas = true;
       }
       isProcessing = false;
+    }
+
+    async function capturarEEnviarImagem(valor) {
+      const snapshotCanvas = document.createElement('canvas');
+      snapshotCanvas.width = video.videoWidth;
+      snapshotCanvas.height = video.videoHeight;
+      snapshotCanvas.getContext('2d').drawImage(video, 0, 0);
+      const imageData = snapshotCanvas.toDataURL('image/jpeg', 0.7);
+
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        await db.collection("leituras").add({
+          valor: valor,
+          imagem: imageData,
+          datahora: new Date().toISOString(),
+          localizacao: {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }
+        });
+      });
     }
 
     setInterval(capturarImagemEProcessar, 2000);
