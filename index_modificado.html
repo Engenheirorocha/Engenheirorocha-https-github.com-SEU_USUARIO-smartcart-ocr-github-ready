@@ -1,222 +1,429 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>SmartCart – Lista e Total</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>SmartCart A3 – OCR + Somatório</title>
   <style>
-    body {
-      font-family: sans-serif;
-      margin: 0;
-      padding: 0;
-      background: linear-gradient(180deg, #0f2027, #203a43, #2c5364);
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+    :root{
+      --bg:#0f1115; --card:#171a21; --muted:#9aa4b2; --text:#e6e9ef; --accent:#2b90d9;
+      --ok:#3ccf91; --warn:#f4d35e; --err:#ff6b6b;
     }
-    #cameraContainer {
-      position: relative;
-      width: 100%;
-      max-width: 400px;
-      margin-top: 10px;
-    }
-    video, canvas {
-      width: 100%;
-      border-radius: 10px;
-    }
-    #focusBox {
-      position: absolute;
-      top: 35%;
-      left: 0;
-      width: 100%;
-      height: 30%;
-      border: 3px solid #00ffcc;
-      box-sizing: border-box;
-      pointer-events: none;
-    }
-    .resultado, .lista {
-      color: white;
-      margin-top: 10px;
-      padding: 10px;
-      border: 1px solid #00ffcc;
-      border-radius: 8px;
-      width: 90%;
-      max-width: 400px;
-      background-color: #111;
-    }
-    .opcao {
-      background: #222;
-      border: 1px solid #00ffcc;
-      border-radius: 6px;
-      margin: 5px 0;
-      padding: 10px;
-    }
-    
-button {
-  background: #00ffcc;
-  border: none;
-  color: black;
-  padding: 10px 16px;
-  margin: 5px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 16px;
-  display: block;
-  width: 100%;
-  max-width: 300px;
-}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:500 15px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    header{position:sticky;top:0;z-index:3;background:#0f1115cc;border-bottom:1px solid #20242e;backdrop-filter:blur(6px)}
+    .wrap{max-width:1100px;margin:0 auto;padding:12px 16px}
+    h1{font-size:18px;margin:0}
+    main{max-width:1100px;margin:14px auto;padding:0 10px;display:grid;grid-template-columns:1.6fr 1fr;gap:12px}
+    .card{background:var(--card);border:1px solid #222b36;border-radius:16px;padding:12px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .stack{display:flex;flex-direction:column;gap:10px}
+    .muted{color:var(--muted)}
+    .btn,.input{border:1px solid #2a2f3a;border-radius:12px;background:#0f131a;color:var(--text);padding:10px 12px}
+    .btn{cursor:pointer}
+    .btn.primary{background:#172031;border-color:var(--accent)}
+    .btn.ghost{background:transparent}
+    .btn.ok{background:#0f1c18;border-color:#1b6f52}
+    .btn.warn{background:#211f11;border-color:#5e5321}
+    .btn.err{background:#231313;border-color:#5b2020}
+    .pill{font-size:12px;padding:2px 8px;border:1px solid #2a2f3a;border-radius:999px;color:#b5ffc8}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
+    /* Video + overlay */
+    .videoWrap{position:relative;border-radius:14px;overflow:hidden;border:1px solid #2a2f3a;aspect-ratio:16/9;background:#0b0e13}
+    video{width:100%;height:100%;object-fit:cover}
+    .roi{
+      position:absolute;inset:0;display:grid;place-items:center;pointer-events:none
+    }
+    .box{
+      width:min(70%,720px);height:min(45%,360px);
+      outline:2px dashed rgba(97,218,251,.85);
+      outline-offset:-2px;border-radius:10px;
+      box-shadow:0 0 0 9999px rgba(0,0,0,.35) inset;
+    }
+    .hud{position:absolute;left:10px;bottom:10px;display:flex;gap:8px;flex-wrap:wrap}
+    .hud .tag{background:#0f131a;border:1px solid #2a2f3a;border-radius:10px;padding:6px 8px;font-size:12px;color:#c9d3e1}
+
+    /* Lista / total */
+    .list{display:flex;flex-direction:column;gap:8px;max-height:62vh;overflow:auto;padding-right:4px}
+    .item{display:flex;justify-content:space-between;align-items:center;background:#11151d;border:1px solid #2a2f3a;border-radius:12px;padding:8px 10px}
+    .item small{color:var(--muted)}
+    .total{font-size:22px;font-weight:700}
+    .toast{font-size:13px;padding:8px 10px;border-radius:10px}
+    .toast.ok{background:#12261d;border:1px solid #2b8a64}
+    .toast.warn{background:#2a2714;border:1px solid #6b5f20}
+    .toast.err{background:#2a1414;border:1px solid #6b2020}
+
+    @media (max-width:900px){
+      main{grid-template-columns:1fr}
+      .videoWrap{aspect-ratio:auto;height:54vh}
+      .list{max-height:none}
+    }
   </style>
 </head>
 <body>
+  <header>
+    <div class="wrap">
+      <h1>SmartCart A3 – OCR contínuo + Somatório</h1>
+    </div>
+  </header>
 
-  <h2 style="color:white;">🛒 SmartCart – Leitura Inteligente</h2>
-  <div id="cameraContainer">
-    <video id="video" autoplay playsinline></video>
-    <canvas id="canvas" style="display:none;"></canvas>
-    <div id="focusBox"></div>
-  </div>
+  <main>
+    <!-- Lado esquerdo: câmera + controles -->
+    <section class="stack">
+      <div class="card stack">
+        <div class="row">
+          <button id="btnStart" class="btn primary">Iniciar Câmera</button>
+          <button id="btnToggle" class="btn">Pausar OCR</button>
+          <button id="btnClear" class="btn ghost">Limpar Lista</button>
+          <span id="status" class="muted">Pronto</span>
+        </div>
+        <div class="videoWrap" id="videoWrap">
+          <video id="video" playsinline muted></video>
+          <div class="roi">
+            <div class="box" id="roiBox" aria-label="Área de leitura"></div>
+            <div class="hud">
+              <span class="tag" id="fpsTag">OCR: 0/s</span>
+              <span class="tag" id="lastTag">Último: —</span>
+              <span class="tag" id="confTag">Conf: —</span>
+            </div>
+          </div>
+        </div>
+        <div class="muted">Dica: mantenha a etiqueta dentro do retângulo. O app identifica valores como <strong>7,99</strong>, <strong>12.50</strong>, <strong>1.234,56</strong> e soma automaticamente, sem alertas.</div>
+      </div>
 
-  <div id="resultado" class="resultado" style="display:none;"></div>
-  <div id="listaProdutos" class="lista" style="display:none;">
-    <h3>🛒 Produtos Adicionados</h3>
-    <ul id="produtos"></ul>
-    <p id="total">🧾 Total: R$ 0,00</p>
-  </div>
+      <div class="card">
+        <div class="grid2">
+          <input id="manualInput" class="input" placeholder="Adicionar manualmente (ex: 14,90)"/>
+          <button id="btnAddManual" class="btn ok">Adicionar Manualmente</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button id="btnUndo" class="btn warn">Desfazer Último</button>
+          <small class="muted">Até 10 desfazeres</small>
+        </div>
+        <div id="toast" class="toast" style="display:none"></div>
+      </div>
+    </section>
 
+    <!-- Lado direito: lista + total -->
+    <aside class="card stack">
+      <div class="row" style="justify-content:space-between">
+        <strong>Itens adicionados</strong>
+        <div> Total: <span class="total" id="totalLabel">R$ 0,00</span> </div>
+      </div>
+      <div id="list" class="list"></div>
+    </aside>
+  </main>
+
+  <!-- Tesseract.js para OCR -->
+  <script src="https://unpkg.com/tesseract.js@5.0.2/dist/tesseract.min.js"></script>
   <script>
-    let ocrAtivo = true;
-    let produtosConfirmados = [];
-    let total = 0;
+    // ====== Utilidades ======
+    const fmtBRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
+    const $ = sel => document.querySelector(sel);
 
-    function detectarMelhoresNomes(textoOCR) {
-      const linhas = textoOCR.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      const marcas = ['Italac', 'Tio João', 'Ninho', 'Qualitá', 'Sadia', 'Nestlé'];
-      const unidades = ['kg', 'g', 'ml', 'l', 'L', 'un', 'und'];
-      const palavrasBanidas = ['val', 'validade', 'promoção', 'data', 'expira', 'venc', 'fabric'];
-      const opcoes = [];
-      const precosDetectados = [];
+    function showToast(msg, kind='ok'){
+      const el = $('#toast');
+      el.textContent = msg;
+      el.className = 'toast ' + kind;
+      el.style.display = 'inline-block';
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(()=> el.style.display = 'none', 2200);
+    }
 
-      for (const linha of linhas) {
-        const linhaLimpa = linha.toLowerCase();
-        const temPreco = /(r\$\s*|por\s*|preço\s*)?\d{1,3}[.,]\d{2}/.test(linhaLimpa);
+    // Converte string de preço para número (padrão BRL)
+    function parsePrice(str){
+      if(!str) return NaN;
+      str = String(str).replace(/[^\d.,]/g,'').trim();
+      if(!str) return NaN;
+      // Caso com ponto e vírgula
+      if(str.includes('.') && str.includes(',')){
+        // Assume . milhar e , decimal (BR)
+        str = str.replace(/\./g,'').replace(',', '.');
+      } else if(str.includes(',')){
+        // Decimal é vírgula
+        str = str.replace(',', '.');
+      }
+      const val = Number(str);
+      return isFinite(val) ? val : NaN;
+    }
 
-        const precos = linha.match(/(r\$\s?)?(\d{1,3}[.,]\d{2})/gi);
-        if (precos && temPreco && !palavrasBanidas.some(p => linhaLimpa.includes(p))) {
-          precos.forEach(p => {
-            const num = p.replace(/[^0-9,\.]/g, '').replace(',', '.');
-            const val = parseFloat(num);
-            if (val > 0.5 && val < 500) precosDetectados.push(val);
-          });
-        }
+    // Regex: captura valores R$ ou puros, com 2 decimais
+    const PRICE_REGEX = /(?:R\$\s*)?(\d{1,4}(?:[.,]\d{3})*(?:[.,]\d{2})|\d+[.,]\d{2})/g;
 
-        let pontos = 0;
-        const palavras = linha.split(' ');
-        if (palavras.length >= 2) pontos += 2;
-        if (marcas.some(m => linha.includes(m))) pontos += 3;
-        if (unidades.some(u => linhaLimpa.includes(u))) pontos += 2;
-        if (!palavrasBanidas.some(p => linhaLimpa.includes(p))) pontos += 2;
-        if (linha === linha.toUpperCase()) pontos += 1;
+    // ====== Estado ======
+    const state = {
+      running: false,
+      stream: null,
+      lastOCR: 0,
+      detections: new Map(), // valor -> {count, first, last}
+      lastAdded: { value: null, at: 0 },
+      items: [],
+      undoStack: [], // guarda últimos itens (máx 10)
+      total: 0
+    };
 
-        opcoes.push({ texto: linha, pontos });
+    function addItem(value, source='OCR'){
+      const now = Date.now();
+      // Evita repetir o mesmo valor em sequência muito rápido (10s)
+      if(state.lastAdded.value === value && (now - state.lastAdded.at) < 10000){
+        $('#lastTag').textContent = `Último: ignorado ${fmtBRL.format(value)}`;
+        return;
+      }
+      const item = { id: now, value, source };
+      state.items.push(item);
+      state.undoStack.push(item);
+      if(state.undoStack.length > 10) state.undoStack.shift();
+      state.total += value;
+      state.lastAdded = { value, at: now };
+      renderList();
+      showToast(`${source === 'OCR' ? 'Detectado' : 'Adicionado'}: ${fmtBRL.format(value)}`, 'ok');
+    }
+
+    function undoLast(){
+      const last = state.undoStack.pop();
+      if(!last){
+        showToast('Nada para desfazer', 'warn'); return;
+      }
+      // remove o item correspondente na lista (última ocorrência com id)
+      const idx = state.items.findIndex(it => it.id === last.id);
+      if(idx >= 0){
+        state.items.splice(idx,1);
+        state.total -= last.value;
+        renderList();
+        showToast(`Removido: ${fmtBRL.format(last.value)}`, 'warn');
+      }
+    }
+
+    function clearList(){
+      state.items = [];
+      state.undoStack = [];
+      state.total = 0;
+      renderList();
+      showToast('Lista limpa', 'warn');
+    }
+
+    function renderList(){
+      $('#totalLabel').textContent = fmtBRL.format(Math.max(0, state.total));
+      const list = $('#list');
+      list.innerHTML = '';
+      for(const it of state.items.slice().reverse()){ // mostra recentes primeiro
+        const row = document.createElement('div');
+        row.className = 'item';
+        row.innerHTML = `
+          <div>
+            <strong>${fmtBRL.format(it.value)}</strong>
+            <br><small>${it.source}</small>
+          </div>
+          <button class="btn err" data-id="${it.id}">x</button>
+        `;
+        row.querySelector('button').onclick = () => {
+          const id = it.id;
+          const idx = state.items.findIndex(o => o.id === id);
+          if(idx >= 0){
+            state.total -= state.items[idx].value;
+            state.items.splice(idx,1);
+            renderList();
+          }
+        };
+        list.appendChild(row);
+      }
+    }
+
+    // ====== Câmera e OCR ======
+    const video = $('#video');
+    const videoWrap = $('#videoWrap');
+    const fpsTag = $('#fpsTag');
+    const lastTag = $('#lastTag');
+    const confTag = $('#confTag');
+    let worker;
+
+    async function initTesseract(){
+      if(worker) return worker;
+      worker = await Tesseract.createWorker({
+        logger: m => { /* opcional: console.log(m) */ }
+      });
+      // Inglês funciona bem para dígitos/pontuação; pt também OK
+      await worker.loadLanguage('eng');
+      await worker.initialize('eng');
+      // Dica: whitelist para acelerar leitura de números e separadores
+      await worker.setParameters({
+        tessedit_char_whitelist: '0123456789R$.,-',
+      });
+      return worker;
+    }
+
+    async function startCamera(){
+      if(state.stream) return;
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+        state.stream = stream;
+        video.srcObject = stream;
+        await video.play();
+        $('#status').textContent = 'Câmera ligada';
+      } catch(e){
+        $('#status').textContent = 'Permita acesso à câmera (HTTPS necessário no celular)';
+        showToast('Não foi possível acessar a câmera', 'err');
+      }
+    }
+
+    function getRoiImageData(){
+      const vw = video.videoWidth || video.clientWidth;
+      const vh = video.videoHeight || video.clientHeight;
+      if(!vw || !vh) return null;
+
+      // ROI proporcional à .box (70% x 45%)
+      const rw = Math.round(vw * 0.70);
+      const rh = Math.round(vh * 0.45);
+      const rx = Math.round((vw - rw)/2);
+      const ry = Math.round((vh - rh)/2);
+
+      // Canvas de trabalho (reduzido para acelerar OCR)
+      const scale = 0.6; // ajuste fino
+      const cw = Math.max(1, Math.round(rw * scale));
+      const ch = Math.max(1, Math.round(rh * scale));
+      const canvas = getRoiImageData._c || document.createElement('canvas');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      canvas.width = cw; canvas.height = ch;
+
+      // Desenha frame da ROI no canvas
+      ctx.drawImage(video, rx, ry, rw, rh, 0, 0, cw, ch);
+
+      return canvas;
+    }
+
+    // Agregação para evitar falsos positivos: confirma se o mesmo valor aparece >=2x em janela curta
+    function registerDetection(value){
+      const now = Date.now();
+      const key = value.toFixed(2);
+      const rec = state.detections.get(key) || { count:0, first:now, last:0 };
+      rec.count += 1;
+      rec.last = now;
+      state.detections.set(key, rec);
+
+      // expira antigos
+      for(const [k, r] of state.detections){
+        if(now - r.last > 3000) state.detections.delete(k);
       }
 
-      opcoes.sort((a, b) => b.pontos - a.pontos);
-      const precoFinal = precosDetectados.sort((a, b) => a - b)[0];
-      return {
-        opcoes: opcoes.slice(0, 3),
-        preco: precoFinal ? parseFloat(precoFinal.toFixed(2)) : null
-      };
+      // threshold
+      if(rec.count >= 2){
+        state.detections.clear(); // evita múltiplos adds
+        addItem(value, 'OCR');
+      }
     }
 
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const resultadoDiv = document.getElementById('resultado');
-    const listaDiv = document.getElementById('listaProdutos');
-    const listaUL = document.getElementById('produtos');
-    const totalSpan = document.getElementById('total');
-    const context = canvas.getContext('2d');
+    let loopId = null, lastTick = 0, ocrPerSec = 0, ocrCountWindow = 0, lastFPSUpdate = 0;
 
-    async function iniciarCamera() {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      video.srcObject = stream;
+    async function ocrLoop(){
+      if(!state.running) return;
+      const now = performance.now();
+      if(now - lastTick < 750){ // ~1.3x/seg (ajuste conforme desempenho)
+        loopId = requestAnimationFrame(ocrLoop);
+        return;
+      }
+      lastTick = now;
+
+      try{
+        const canvas = getRoiImageData();
+        if(canvas){
+          const { data } = await worker.recognize(canvas);
+          ocrCountWindow++;
+          const text = (data.text || '').replace(/\s+/g,' ');
+          $('#status').textContent = 'Lendo...';
+          confTag.textContent = 'Conf: ' + (data.confidence ? Math.round(data.confidence) : '—');
+
+          // Extrai possíveis preços
+          const found = new Set();
+          let m;
+          while((m = PRICE_REGEX.exec(text)) !== null){
+            const raw = m[1];
+            const val = parsePrice(raw);
+            if(isFinite(val) && val >= 0.1 && val <= 10000){
+              found.add(Number(val.toFixed(2)));
+            }
+          }
+
+          // Atualiza HUD
+          lastTag.textContent = 'Último: ' + (found.size ? fmtBRL.format([...found][0]) : '—');
+
+          // Heurística: escolhe o menor valor plausível (normalmente o valor unitário)
+          if(found.size){
+            const val = Math.min(...found);
+            registerDetection(val);
+          }
+        }
+      } catch(e){
+        console.warn('OCR erro:', e);
+      } finally{
+        // FPS lógico do OCR
+        const t = performance.now();
+        if(t - lastFPSUpdate > 1000){
+          ocrPerSec = ocrCountWindow;
+          ocrCountWindow = 0;
+          lastFPSUpdate = t;
+          fpsTag.textContent = `OCR: ${ocrPerSec}/s`;
+        }
+        loopId = requestAnimationFrame(ocrLoop);
+      }
     }
 
-    async function processarOCR() {
-      if (!ocrAtivo || !video.videoWidth || !video.videoHeight) return;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // ====== Controles UI ======
+    $('#btnStart').addEventListener('click', async ()=>{
+      await startCamera();
+      await initTesseract();
+      if(!state.running){
+        state.running = true;
+        $('#btnToggle').textContent = 'Pausar OCR';
+        ocrLoop();
+        showToast('OCR iniciado');
+      }
+    });
 
-      const focoX = 0;
-      const focoY = canvas.height * 0.35;
-      const focoLarg = canvas.width;
-      const focoAlt = canvas.height * 0.3;
+    $('#btnToggle').addEventListener('click', ()=>{
+      if(!worker){
+        showToast('Inicie a câmera primeiro', 'warn');
+        return;
+      }
+      state.running = !state.running;
+      $('#btnToggle').textContent = state.running ? 'Pausar OCR' : 'Retomar OCR';
+      if(state.running){
+        ocrLoop();
+        showToast('OCR retomado');
+      } else {
+        if(loopId) cancelAnimationFrame(loopId);
+        showToast('OCR pausado', 'warn');
+      }
+    });
 
-      const imageData = context.getImageData(focoX, focoY, focoLarg, focoAlt);
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = focoLarg;
-      tempCanvas.height = focoAlt;
-      tempCanvas.getContext('2d').putImageData(imageData, 0, 0);
+    $('#btnAddManual').addEventListener('click', ()=>{
+      const raw = $('#manualInput').value.trim();
+      const val = parsePrice(raw);
+      if(!isFinite(val)){ showToast('Valor inválido', 'err'); return; }
+      addItem(val, 'Manual');
+      $('#manualInput').value = '';
+    });
 
-      const dataURL = tempCanvas.toDataURL('image/png');
-      const { data: { text } } = await Tesseract.recognize(dataURL, 'por');
-      const resultado = detectarMelhoresNomes(text);
+    $('#btnUndo').addEventListener('click', undoLast);
+    $('#btnClear').addEventListener('click', clearList);
 
-      if (!resultado.preco) return;
+    // Evita vazamento quando sair da página
+    window.addEventListener('beforeunload', ()=>{
+      if(state.stream){
+        state.stream.getTracks().forEach(t=>t.stop());
+      }
+    });
 
-      ocrAtivo = false;
-      let html = `<strong>💰 Preço:</strong> R$ ${resultado.preco.toFixed(2).replace('.', ',')}<br><br>`;
-      resultado.opcoes.forEach(op => {
-        html += `
-          <div class="opcao">
-            <strong>${op.texto}</strong><br>
-            <button onclick="confirmarProduto('${op.texto}', ${resultado.preco})">Adicionar</button>
-          </div>
-        `;
-      });
-
-      html += `<br><button onclick="excluirProduto()">Excluir</button>`;
-
-      resultadoDiv.innerHTML = html;
-      resultadoDiv.style.display = 'block';
-    }
-
-    function confirmarProduto(nome, preco) {
-      produtosConfirmados.push({ nome, preco });
-      total += preco;
-      atualizarLista();
-      resultadoDiv.style.display = 'none';
-      ocrAtivo = true;
-    }
-
-    function excluirProduto() {
-      resultadoDiv.style.display = 'none';
-      ocrAtivo = true;
-    }
-
-    function atualizarLista() {
-      listaUL.innerHTML = '';
-      produtosConfirmados.forEach(p => {
-        const item = document.createElement('li');
-        item.textContent = `${p.nome} – R$ ${p.preco.toFixed(2).replace('.', ',')}`;
-        listaUL.appendChild(item);
-      });
-      totalSpan.textContent = `🧾 Total: R$ ${total.toFixed(2).replace('.', ',')}`;
-      listaDiv.style.display = 'block';
-    }
-
-    async function loopOCR() {
-      await processarOCR();
-      setTimeout(loopOCR, 2000);
-    }
-
-    iniciarCamera().then(loopOCR);
+    // Expor integração para outros módulos (ex.: chat/geo, se quiser)
+    window.SmartCartA3 = {
+      addFromOCR(price){ if(typeof price === 'number') addItem(price, 'OCR'); },
+      pause(){ if(state.running){ $('#btnToggle').click(); } },
+      resume(){ if(!state.running){ $('#btnToggle').click(); } },
+    };
   </script>
-
 </body>
 </html>
+
