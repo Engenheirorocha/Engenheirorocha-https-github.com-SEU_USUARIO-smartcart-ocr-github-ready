@@ -199,7 +199,6 @@
       <div class="row">
         <input id="manualInput" class="input" type="number" step="0.01" placeholder="Digite o valor (ex: 10.50)">
         <button class="btn ok" onclick="adicionarManual()">➕ Adicionar</button>
-        <!-- NOVOS BOTÕES (sem alterar o layout existente) -->
         <button class="btn warn" onclick="diminuirManual()">➖ Diminuir</button>
         <button class="btn err" onclick="zerarTotal()">🧹 Zerar Total</button>
       </div>
@@ -242,13 +241,11 @@
     let canvas = document.createElement('canvas');
     let isProcessing = false;
     let valoresAdicionados = [];
-    let sugestoesFixas = false; // mantém por compat, mas não trava mais o OCR
+    let sugestoesFixas = false;
 
-    // NOVO: cooldown para estabilidade das sugestões
     let lastSuggestionsAt = 0;
     const SUGGESTIONS_COOLDOWN = 1200; // ms
 
-    // ROI em coords do overlay (canvas)
     const roi = { x:0, y:0, w:0, h:0 };
 
     function syncOverlayToVideo(){
@@ -280,7 +277,6 @@
       const ctx = overlay.getContext('2d');
       ctx.clearRect(0, 0, overlay.width, overlay.height);
 
-      // ROI 50% x 20%, centralizada
       const w = overlay.width  * 0.5;
       const h = overlay.height * 0.2;
       const x = (overlay.width  - w) / 2;
@@ -302,7 +298,7 @@
       valoresAdicionados.push(valor);
       somaSpan.innerText = total.toFixed(2);
       limparSugestoes();
-      sugestoesFixas = false; // compat
+      sugestoesFixas = false;
       bip.play();
       if (btn) {
         btn.classList.add('pulse');
@@ -327,7 +323,6 @@
       input.value = '';
     }
 
-    /* ===== NOVO: Diminuir valor manual ===== */
     function diminuirManual() {
       const input = document.getElementById('manualInput');
       const valor = parseFloat((input.value || '').replace(',', '.'));
@@ -336,19 +331,17 @@
         return;
       }
       total -= valor;
-      if (total < 0) total = 0; // protege total de ficar negativo
-      valoresAdicionados.push(-valor); // mantém compatibilidade com desfazer
+      if (total < 0) total = 0;
+      valoresAdicionados.push(-valor);
       somaSpan.innerText = total.toFixed(2);
       limparSugestoes();
       sugestoesFixas = false;
       bip.play();
-      // não limpa o input para o usuário poder ajustar rapidamente se quiser
     }
 
-    /* ===== NOVO: Zerar Total ===== */
     function zerarTotal() {
       total = 0;
-      valoresAdicionados = []; // inicia nova “sessão” de somatório
+      valoresAdicionados = [];
       somaSpan.innerText = total.toFixed(2);
       bip.play();
     }
@@ -356,7 +349,7 @@
     function desfazerUltimo() {
       if (valoresAdicionados.length > 0) {
         const valor = valoresAdicionados.pop();
-        total -= valor; // se for negativo, desfaz a subtração (soma)
+        total -= valor;
         if (total < 0) total = 0;
         somaSpan.innerText = total.toFixed(2);
       }
@@ -368,14 +361,12 @@
     }
 
     async function capturarImagemEProcessar() {
-      // REMOVIDO: trava por sugestoesFixas
       if (isProcessing || video.videoWidth === 0) return;
       isProcessing = true;
       desenharROI();
 
       const ctx = canvas.getContext('2d');
 
-      // Mapear ROI (overlay exibido) -> pixels reais do vídeo
       const scaleX = video.videoWidth  / overlay.width;
       const scaleY = video.videoHeight / overlay.height;
 
@@ -384,7 +375,6 @@
       const roiX      = Math.round(roi.x * scaleX);
       const roiY      = Math.round(roi.y * scaleY);
 
-      // NOVO: Downscale para acelerar OCR (máximo 600px de largura)
       const MAX_W = 600;
       let dw = roiWidth;
       let dh = roiHeight;
@@ -397,14 +387,14 @@
       canvas.width = dw;
       canvas.height = dh;
 
-      // NOVO: leve pré-processamento (grayscale + contraste)
       if (ctx.filter !== undefined) ctx.filter = 'grayscale(1) contrast(115%)';
       ctx.drawImage(video, roiX, roiY, roiWidth, roiHeight, 0, 0, dw, dh);
       if (ctx.filter !== undefined) ctx.filter = 'none';
 
       try {
+        // ===== NOVO REGEX: aceita inteiros ou com centavos =====
         const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
-        const matches = text.match(/\d{1,3}(?:[.,]\d{2})/g);
+        const matches = text.match(/\b\d{1,4}(?:[.,]\d{2})?\b/g);
         if (matches) {
           const now = Date.now();
           if (now - lastSuggestionsAt >= SUGGESTIONS_COOLDOWN) {
@@ -413,50 +403,11 @@
             limparSugestoes();
             matches.slice(0, 3).forEach(str => {
               const valor = parseFloat(str.replace(',', '.'));
-              if (!isNaN(valor)) {
+              if (!isNaN(valor) && valor > 0 && valor <= 9999) {
                 const btn = document.createElement('div');
                 btn.className = 'preco-btn';
                 btn.innerText = `R$ ${valor.toFixed(2)}`;
-                btn.onclick = () => adicionarPreco(valor, btn);
-                precosDiv.appendChild(btn);
-              }
-            });
+                btn
 
-            // REMOVIDO: sugestoesFixas = true;
-          }
-        }
-      } catch (e) {
-        console.warn('OCR erro:', e);
-      } finally {
-        isProcessing = false;
-      }
-    }
-
-    async function capturarEEnviarImagem(valor) {
-      const snapshotCanvas = document.createElement('canvas');
-      snapshotCanvas.width = video.videoWidth;
-      snapshotCanvas.height = video.videoHeight;
-      snapshotCanvas.getContext('2d').drawImage(video, 0, 0);
-      const imageData = snapshotCanvas.toDataURL('image/jpeg', 0.7);
-
-      navigator.geolocation.getCurrentPosition(async (position) => {
-        await db.collection("leituras").add({
-          valor: valor,
-          imagem: imageData,
-          datahora: new Date().toISOString(),
-          localizacao: {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          }
-        });
-      });
-    }
-
-    // NOVO: intervalo mais ágil (1,2s)
-    setInterval(capturarImagemEProcessar, 1200);
-    iniciarCamera();
-  </script>
-</body>
-</html>
 
 
