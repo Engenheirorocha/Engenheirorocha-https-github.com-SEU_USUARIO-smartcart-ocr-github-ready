@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SmartCart OCR — A4</title>
+  <title>SmartCart OCR — A4 (estável)</title>
 
   <!-- Libs originais (inalteradas) -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
@@ -241,7 +241,7 @@
     let canvas = document.createElement('canvas');
     let isProcessing = false;
     let valoresAdicionados = [];
-    let sugestoesFixas = false;
+    let sugestoesFixas = false; // compat
 
     // Cooldown para estabilidade das sugestões
     let lastSuggestionsAt = 0;
@@ -313,7 +313,7 @@
       valoresAdicionados.push(valor);
       somaSpan.innerText = total.toFixed(2);
       limparSugestoes();
-      sugestoesFixas = false;
+      sugestoesFixas = false; // compat
       bip.play();
       if (btn) {
         btn.classList.add('pulse');
@@ -377,37 +377,6 @@
       sugestoesFixas = false;
     }
 
-    /* ===== Helper: normaliza números para parseFloat (ponto decimal) ===== */
-    function normalizarNumero(str){
-      str = (str || '').trim();
-      str = str.replace(/[^\d.,]/g, ''); // mantém só dígitos, vírgulas e pontos
-
-      // sem separador => inteiro
-      if (!/[.,]/.test(str)) return str + '.00';
-
-      const lastComma = str.lastIndexOf(',');
-      const lastDot   = str.lastIndexOf('.');
-      const decimalSep = (lastComma > lastDot) ? ',' : '.';
-
-      // remove milhares e converte decimal para ponto
-      let cleaned = '';
-      for (let i = 0; i < str.length; i++){
-        const ch = str[i];
-        if (/\d/.test(ch)) cleaned += ch;
-        else if (ch === decimalSep) cleaned += '.';
-      }
-      // garante duas casas
-      if (!/\.\d{2}$/.test(cleaned)) {
-        if (cleaned.includes('.')) {
-          const [intp, frac=''] = cleaned.split('.');
-          cleaned = intp + '.' + (frac + '00').slice(0,2);
-        } else {
-          cleaned = cleaned + '.00';
-        }
-      }
-      return cleaned;
-    }
-
     async function capturarImagemEProcessar() {
       if (isProcessing || video.videoWidth === 0) return;
       isProcessing = true;
@@ -424,7 +393,7 @@
       const roiX      = Math.round(roi.x * scaleX);
       const roiY      = Math.round(roi.y * scaleY);
 
-      // Downscale base para acelerar
+      // Downscale para acelerar OCR (máximo 600px de largura)
       const MAX_W = 600;
       let dw = roiWidth;
       let dh = roiHeight;
@@ -434,65 +403,33 @@
         dh = Math.max(1, Math.round(dh * s));
       }
 
-      // Multi-escala ajuda em tamanhos de fonte diferentes
-      const SCALES = [0.85, 1.0, 1.25, 1.5];
-      const encontrados = new Set();
+      canvas.width = dw;
+      canvas.height = dh;
+
+      // leve pré-processamento (grayscale + contraste)
+      if (ctx.filter !== undefined) ctx.filter = 'grayscale(1) contrast(115%)';
+      ctx.drawImage(video, roiX, roiY, roiWidth, roiHeight, 0, 0, dw, dh);
+      if (ctx.filter !== undefined) ctx.filter = 'none';
 
       try {
-        for (const sc of SCALES) {
-          const w = Math.max(1, Math.round(dw * sc));
-          const h = Math.max(1, Math.round(dh * sc));
-          canvas.width = w;
-          canvas.height = h;
-
-          // Pré-processamento leve (grayscale/contraste/brilho)
-          if (ctx.filter !== undefined) ctx.filter = 'grayscale(1) contrast(125%) brightness(110%)';
-          ctx.imageSmoothingEnabled = true;
-          ctx.drawImage(video, roiX, roiY, roiWidth, roiHeight, 0, 0, w, h);
-          if (ctx.filter !== undefined) ctx.filter = 'none';
-
-          // OCR focado em números (linha única)
-          const { data: { text } } = await Tesseract.recognize(canvas, 'eng', {
-            tessedit_pageseg_mode: 7, // single text line
-            user_defined_dpi: '300',
-            tessedit_char_whitelist: '0123456789,.',
-            preserve_interword_spaces: '1',
-            classify_bln_numeric_mode: '1'
-          });
-
-          // Inteiros ou decimais, com/sem milhar
-          const m = text.match(/\b(?:\d{1,3}(?:[.,]\d{3})+|\d+)(?:[.,]\d{2})?\b/g);
-          if (m) m.forEach(s => encontrados.add(s));
-        }
-
-        if (encontrados.size > 0) {
+        // REGEX ORIGINAL (somente com centavos)
+        const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
+        const matches = text.match(/\d{1,3}(?:[.,]\d{2})/g);
+        if (matches) {
           const now = Date.now();
           if (now - lastSuggestionsAt >= SUGGESTIONS_COOLDOWN) {
             lastSuggestionsAt = now;
+
             limparSugestoes();
-
-            const nums = Array.from(encontrados)
-              .map(s => {
-                const norm = normalizarNumero(s);
-                const v = parseFloat(norm);
-                return { s, v };
-              })
-              .filter(x => !isNaN(x.v) && x.v > 0 && x.v <= 99999)
-              // prioridade: com centavos primeiro, depois inteiros; fallback por valor
-              .sort((a, b) => {
-                const aFrac = (a.s.includes(',') || a.s.includes('.')) ? 0 : 1;
-                const bFrac = (b.s.includes(',') || b.s.includes('.')) ? 0 : 1;
-                if (aFrac !== bFrac) return aFrac - bFrac;
-                return b.v - a.v;
-              })
-              .slice(0, 3);
-
-            nums.forEach(({ v }) => {
-              const btn = document.createElement('div');
-              btn.className = 'preco-btn';
-              btn.innerText = `R$ ${v.toFixed(2)}`;
-              btn.onclick = () => adicionarPreco(v, btn);
-              precosDiv.appendChild(btn);
+            matches.slice(0, 3).forEach(str => {
+              const valor = parseFloat(str.replace(',', '.'));
+              if (!isNaN(valor) && valor > 0) {
+                const btn = document.createElement('div');
+                btn.className = 'preco-btn';
+                btn.innerText = `R$ ${valor.toFixed(2)}`;
+                btn.onclick = () => adicionarPreco(valor, btn);
+                precosDiv.appendChild(btn);
+              }
             });
           }
         }
@@ -533,6 +470,7 @@
   </script>
 </body>
 </html>
+
 
 
 
