@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SmartCart OCR — A4 (estável)</title>
+  <title>SmartCart OCR — A4 (estável + Histórico)</title>
 
   <!-- Libs originais (inalteradas) -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
@@ -164,6 +164,49 @@
       border-left:3px solid rgba(110,168,254,0.5);
       padding-left:10px;
     }
+
+    /* ===== Modal Histórico ===== */
+    .modal{
+      position: fixed; inset: 0; display:none;
+      align-items:center; justify-content:center;
+      background: rgba(5,8,20,0.6);
+      backdrop-filter: blur(6px);
+      z-index: 999;
+    }
+    .modal.show{ display:flex }
+    .modal-card{
+      width:min(640px, 92vw);
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius:16px;
+      box-shadow: var(--shadow);
+      padding: 12px;
+    }
+    .modal-head{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px; padding:6px 6px 10px 6px; border-bottom: 1px dashed var(--card-border);
+    }
+    .modal-title{ font-weight:700; letter-spacing:.3px }
+    .modal-body{ max-height: 60vh; overflow:auto; padding-top:10px }
+    .hist{
+      display:flex; flex-direction:column; gap:8px;
+    }
+    .hist-item{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 12px; border:1px solid var(--card-border);
+      border-radius:12px; background: rgba(8,12,28,0.55);
+    }
+    .hist-left{
+      display:flex; align-items:center; gap:10px;
+    }
+    .pill{
+      padding:4px 8px; border-radius:999px; font-size:12px;
+      border:1px solid var(--card-border);
+    }
+    .pill.add{ color:#d9ffe9; background: rgba(24,42,30,0.7); border-color: rgba(72,140,92,0.45) }
+    .pill.sub{ color:#ffe0e0; background: rgba(52,24,24,0.6); border-color: rgba(164,74,74,0.45) }
+    .hist-val{ font-weight:700 }
+    .hist-time{ color: var(--muted); font-size:12px }
   </style>
 </head>
 <body>
@@ -206,6 +249,7 @@
       <div class="row">
         <button class="btn err" onclick="limparSugestoes()">❌ Apagar sugestões</button>
         <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer último</button>
+        <button class="btn" onclick="abrirHistorico()">📜 Histórico</button>
       </div>
 
       <div id="total">
@@ -214,6 +258,19 @@
       </div>
     </aside>
   </main>
+
+  <!-- Modal Histórico -->
+  <div id="historicoModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="histTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="modal-title" id="histTitle">Histórico de lançamentos</div>
+        <button class="btn" onclick="fecharHistorico()">✖ Fechar</button>
+      </div>
+      <div class="modal-body">
+        <div id="historicoLista" class="hist"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- Audio -->
   <audio id="bip-audio" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
@@ -236,6 +293,16 @@
     const precosDiv = document.getElementById('precos');
     const somaSpan = document.getElementById('soma');
     const bip = document.getElementById('bip-audio');
+
+    /* ===== NOVO: Histórico ===== */
+    const historico = []; // {tipo:'add'|'sub', valor:number, data:Date, total:number}
+    function registrar(tipo, valor){
+      historico.unshift({ // unshift para mostrar mais recentes no topo
+        tipo, valor,
+        data: new Date(),
+        total: total
+      });
+    }
 
     let total = 0;
     let canvas = document.createElement('canvas');
@@ -319,6 +386,7 @@
         btn.classList.add('pulse');
         setTimeout(() => btn.classList.remove('pulse'), 300);
       }
+      registrar('add', valor); // histórico
       capturarEEnviarImagem(valor);
     }
 
@@ -337,11 +405,12 @@
       limparSugestoes();
       sugestoesFixas = false;
       bip.play();
+      registrar('add', valor); // histórico
       input.value = '';
       input.focus();
     }
 
-    /* ===== Diminuir valor manual (agora limpa o campo também) ===== */
+    /* ===== Diminuir valor manual ===== */
     function diminuirManual() {
       const input = document.getElementById('manualInput');
       const valor = parseFloat((input.value || '').replace(',', '.'));
@@ -359,6 +428,7 @@
       sugestoesFixas = false;
       bip.play();
 
+      registrar('sub', valor); // histórico
       input.value = '';   // limpa após subtrair
       input.focus();
     }
@@ -369,6 +439,7 @@
       valoresAdicionados = []; // nova sessão
       somaSpan.innerText = total.toFixed(2);
       bip.play();
+      // (não registra no histórico por enquanto)
     }
 
     function desfazerUltimo() {
@@ -377,6 +448,7 @@
         total -= valor; // se negativo, desfaz subtração
         if (total < 0) total = 0;
         somaSpan.innerText = total.toFixed(2);
+        // (não farei entrada de 'undo' no histórico para manter simples)
       }
     }
 
@@ -384,6 +456,55 @@
       precosDiv.innerHTML = '';
       sugestoesFixas = false;
     }
+
+    /* ===== Histórico UI ===== */
+    function abrirHistorico(){
+      const el = document.getElementById('historicoModal');
+      const lista = document.getElementById('historicoLista');
+      lista.innerHTML = '';
+
+      if (historico.length === 0){
+        const vazio = document.createElement('div');
+        vazio.className = 'hist-item';
+        vazio.innerHTML = '<span class="hist-val">Nenhum lançamento ainda</span><span class="hist-time">—</span>';
+        lista.appendChild(vazio);
+      } else {
+        historico.forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'hist-item';
+          const tipoPill = `<span class="pill ${item.tipo === 'add' ? 'add' : 'sub'}">${item.tipo === 'add' ? 'Adicionar' : 'Diminuir'}</span>`;
+          const valorFmt = (item.tipo === 'add' ? '+' : '-') + ' R$ ' + item.valor.toFixed(2);
+          const dateFmt = item.data.toLocaleString('pt-BR');
+          row.innerHTML = `
+            <div class="hist-left">
+              ${tipoPill}
+              <span class="hist-val">${valorFmt}</span>
+            </div>
+            <div class="hist-right">
+              <div class="hist-time">${dateFmt}</div>
+              <div class="hist-time">Total após: R$ ${item.total.toFixed(2)}</div>
+            </div>
+          `;
+          lista.appendChild(row);
+        });
+      }
+
+      el.classList.add('show');
+    }
+    function fecharHistorico(){
+      document.getElementById('historicoModal').classList.remove('show');
+    }
+    // fecha modal ao clicar fora
+    document.addEventListener('click', (e)=>{
+      const modal = document.getElementById('historicoModal');
+      if (!modal.classList.contains('show')) return;
+      const card = modal.querySelector('.modal-card');
+      if (!card.contains(e.target)) fecharHistorico();
+    });
+    // ESC fecha modal
+    document.addEventListener('keydown', (e)=>{
+      if (e.key === 'Escape') fecharHistorico();
+    });
 
     async function capturarImagemEProcessar() {
       if (isProcessing || video.videoWidth === 0) return;
@@ -478,3 +599,4 @@
   </script>
 </body>
 </html>
+
