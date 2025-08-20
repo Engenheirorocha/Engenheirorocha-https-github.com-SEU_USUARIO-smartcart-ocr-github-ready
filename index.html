@@ -327,6 +327,8 @@
       const valor = parseFloat((input.value || '').replace(',', '.'));
       if (isNaN(valor) || valor <= 0) {
         alert("Digite um valor válido.");
+        input.value = '';
+        input.focus();
         return;
       }
       total += valor;
@@ -336,14 +338,17 @@
       sugestoesFixas = false;
       bip.play();
       input.value = '';
+      input.focus();
     }
 
-    /* ===== Diminuir valor manual ===== */
+    /* ===== Diminuir valor manual (agora limpa o campo também) ===== */
     function diminuirManual() {
       const input = document.getElementById('manualInput');
       const valor = parseFloat((input.value || '').replace(',', '.'));
       if (isNaN(valor) || valor <= 0) {
         alert("Digite um valor válido.");
+        input.value = '';
+        input.focus();
         return;
       }
       total -= valor;
@@ -353,6 +358,9 @@
       limparSugestoes();
       sugestoesFixas = false;
       bip.play();
+
+      input.value = '';   // limpa após subtrair
+      input.focus();
     }
 
     /* ===== Zerar Total ===== */
@@ -470,8 +478,5 @@
   </script>
 </body>
 </html>
-
-
-
 
 
