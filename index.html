@@ -249,7 +249,7 @@
       <div class="row">
         <button class="btn err" onclick="limparSugestoes()">❌ Apagar sugestões</button>
         <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer último</button>
-        <button class="btn" onclick="abrirHistorico()">📜 Histórico</button>
+        <button class="btn" onclick="abrirHistorico(event)">📜 Histórico</button>
       </div>
 
       <div id="total">
@@ -294,10 +294,10 @@
     const somaSpan = document.getElementById('soma');
     const bip = document.getElementById('bip-audio');
 
-    /* ===== NOVO: Histórico ===== */
+    /* ===== Histórico (memória local da sessão) ===== */
     const historico = []; // {tipo:'add'|'sub', valor:number, data:Date, total:number}
     function registrar(tipo, valor){
-      historico.unshift({ // unshift para mostrar mais recentes no topo
+      historico.unshift({ // mais recentes no topo
         tipo, valor,
         data: new Date(),
         total: total
@@ -380,7 +380,7 @@
       valoresAdicionados.push(valor);
       somaSpan.innerText = total.toFixed(2);
       limparSugestoes();
-      sugestoesFixas = false; // compat
+      sugestoesFixas = false;
       bip.play();
       if (btn) {
         btn.classList.add('pulse');
@@ -421,34 +421,34 @@
         return;
       }
       total -= valor;
-      if (total < 0) total = 0; // protege total de negativo
-      valoresAdicionados.push(-valor); // mantém compatibilidade com desfazer
+      if (total < 0) total = 0;
+      valoresAdicionados.push(-valor);
       somaSpan.innerText = total.toFixed(2);
       limparSugestoes();
       sugestoesFixas = false;
       bip.play();
 
       registrar('sub', valor); // histórico
-      input.value = '';   // limpa após subtrair
+      input.value = '';
       input.focus();
     }
 
     /* ===== Zerar Total ===== */
     function zerarTotal() {
       total = 0;
-      valoresAdicionados = []; // nova sessão
+      valoresAdicionados = [];
       somaSpan.innerText = total.toFixed(2);
       bip.play();
-      // (não registra no histórico por enquanto)
+      // (não registra no histórico)
     }
 
     function desfazerUltimo() {
       if (valoresAdicionados.length > 0) {
         const valor = valoresAdicionados.pop();
-        total -= valor; // se negativo, desfaz subtração
+        total -= valor; // se era negativo, desfaz a subtração
         if (total < 0) total = 0;
         somaSpan.innerText = total.toFixed(2);
-        // (não farei entrada de 'undo' no histórico para manter simples)
+        // (não registra undo no histórico)
       }
     }
 
@@ -457,8 +457,9 @@
       sugestoesFixas = false;
     }
 
-    /* ===== Histórico UI ===== */
-    function abrirHistorico(){
+    /* ===== Histórico UI (com fix do clique) ===== */
+    function abrirHistorico(e){
+      if (e) e.stopPropagation(); // evita fechar no mesmo clique
       const el = document.getElementById('historicoModal');
       const lista = document.getElementById('historicoLista');
       lista.innerHTML = '';
@@ -491,21 +492,23 @@
 
       el.classList.add('show');
     }
+
     function fecharHistorico(){
       document.getElementById('historicoModal').classList.remove('show');
     }
-    // fecha modal ao clicar fora
-    document.addEventListener('click', (e)=>{
-      const modal = document.getElementById('historicoModal');
-      if (!modal.classList.contains('show')) return;
-      const card = modal.querySelector('.modal-card');
-      if (!card.contains(e.target)) fecharHistorico();
+
+    // Fechar ao clicar no FUNDO (overlay), não no documento inteiro
+    const modalEl = document.getElementById('historicoModal');
+    modalEl.addEventListener('click', (e)=>{
+      if (e.target === modalEl) fecharHistorico();
     });
+
     // ESC fecha modal
     document.addEventListener('keydown', (e)=>{
       if (e.key === 'Escape') fecharHistorico();
     });
 
+    /* ===== OCR ===== */
     async function capturarImagemEProcessar() {
       if (isProcessing || video.videoWidth === 0) return;
       isProcessing = true;
@@ -599,4 +602,3 @@
   </script>
 </body>
 </html>
-
