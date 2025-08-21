@@ -18,7 +18,6 @@
                  radial-gradient(900px 500px at 90% 20%, #0c2a3d 0%, transparent 55%),
                  radial-gradient(1100px 700px at 50% 120%, #1a1b32 0%, #0b1020 60%);
       --card: rgba(22,26,48,0.65);
-      --card-2: rgba(15,19,38,0.65);
       --card-border: rgba(117,133,187,0.15);
       --text:#e7edff;
       --muted:#a9b4d0;
@@ -132,19 +131,18 @@
     }
     .modal.show{ display:flex }
     .modal-card{
-      width:min(900px, 94vw); background: var(--card); border: 1px solid var(--card-border);
-      border-radius:16px; box-shadow: var(--shadow); padding: 0; display:flex; flex-direction:column; max-height:90vh;
-      overflow:hidden;
+      width:min(800px, 92vw); background: var(--card); border: 1px solid var(--card-border);
+      border-radius:16px; box-shadow: var(--shadow); padding: 12px; display:flex; flex-direction:column; max-height:90vh;
     }
     .modal-head{
       display:flex; align-items:center; justify-content:space-between; gap:10px;
-      padding:10px 12px; border-bottom: 1px solid var(--card-border); background: var(--card-2);
+      padding:6px 6px 10px 6px; border-bottom: 1px dashed var(--card-border);
     }
     .modal-title{ font-weight:700; letter-spacing:.3px }
-    .modal-body{ overflow:auto; padding:14px; background: linear-gradient(180deg, rgba(10,14,30,0.4), rgba(10,14,30,0.2)); }
+    .modal-body{ overflow:auto; padding-top:10px; }
     .modal-foot{
-      border-top:1px solid var(--card-border); padding:10px 12px; display:flex; gap:8px; align-items:center;
-      background: var(--card-2); position:sticky; bottom:0;
+      border-top:1px dashed var(--card-border); margin-top:10px; padding-top:10px;
+      display:flex; gap:8px; align-items:center; position:sticky; bottom:0; background:var(--card);
     }
 
     /* Histórico */
@@ -160,59 +158,33 @@
     .hist-val{ font-weight:700 }
     .hist-time{ color: var(--muted); font-size:12px }
 
-    /* ===== Chat estilo "feed" ===== */
-    .feed{ display:flex; flex-direction:column; gap:16px; }
-    .fb-card{
+    /* ===== Chat/Feed ===== */
+    .feed{ display:flex; flex-direction:column; gap:12px; }
+    .post{
       border:1px solid var(--card-border); border-radius:14px; background: rgba(8,12,28,0.55);
-      overflow:hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+      overflow:hidden;
     }
-    .fb-header{ display:flex; align-items:center; gap:10px; padding:10px 12px; }
-    .avatar{
-      width:36px; height:36px; border-radius:999px;
-      background: linear-gradient(135deg, #6ea8fe, #36d399); display:grid; place-items:center; font-weight:800; color:#071122;
-      border:1px solid rgba(255,255,255,0.15);
+    .post-img{ width:100%; display:block; object-fit:cover; max-height:420px; }
+    .post-body{ padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+    .post-title{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .price{ font-weight:700; font-size:1.2rem; color:#c5f8d7; }
+    .loc{ font-size:12px; color:var(--muted); }
+    .actions{ display:flex; gap:8px; flex-wrap:wrap; }
+    .btn-ghost{
+      background: rgba(8,12,28,0.35); border:1px solid var(--card-border);
+      color:var(--text); padding:8px 10px; border-radius:10px; cursor:pointer;
     }
-    .author{ font-weight:700 }
-    .time{ font-size:12px; color:var(--muted) }
+    .btn-ghost.active{ outline: 2px solid rgba(110,168,254,0.35); }
+    .btn-ghost[disabled]{ opacity:.5; cursor:not-allowed }
 
-    .fb-body{ padding:0 12px 12px 12px; display:flex; flex-direction:column; gap:8px; }
-    .media{ width:100%; display:block; object-fit:cover; max-height:480px; }
-    .price-badge{
-      display:inline-flex; align-items:center; gap:6px; font-weight:800;
-      background: rgba(16,36,28,0.9); color:#c5f8d7; border:1px solid rgba(72,140,92,0.45);
-      padding:6px 10px; border-radius:999px; width:max-content;
+    /* Mensagens de texto no chat */
+    .msg{
+      border:1px solid var(--card-border); border-radius:14px; background: rgba(8,12,28,0.5);
+      padding:10px 12px; display:flex; flex-direction:column; gap:6px;
     }
-    .subtext{ font-size:12px; color:var(--muted) }
-
-    .fb-actions{
-      display:flex; align-items:center; justify-content:space-between; gap:8px;
-      padding:10px 12px; border-top:1px solid var(--card-border); background: rgba(8,12,28,0.35);
-    }
-    .act-row{ display:flex; gap:8px; flex-wrap:wrap; }
-    .act{
-      background: rgba(8,12,28,0.2); border:1px solid var(--card-border); color:var(--text);
-      padding:8px 10px; border-radius:10px; cursor:pointer; transition:transform .12s ease, background .12s ease;
-    }
-    .act:hover{ transform: translateY(-1px) }
-    .act.active{ outline: 2px solid rgba(110,168,254,0.35); }
-    .act[disabled]{ opacity:.5; cursor:not-allowed }
-
-    /* Mensagem em bolha */
-    .msg-card{ padding:10px 12px 12px 12px; }
-    .msg-line{ display:flex; align-items:flex-start; gap:10px; }
-    .bubble{
-      max-width: 80%; background: rgba(14,18,36,0.85); border:1px solid var(--card-border);
-      padding:10px 12px; border-radius: 12px 12px 12px 4px;
-    }
-    .bubble.me{ background: rgba(24,42,30,0.85); border-color: rgba(72,140,92,0.45); border-radius:12px 12px 4px 12px; }
-    .bubble .msg-text{ white-space:pre-wrap; }
-    .bubble .msg-meta{ font-size:12px; color:var(--muted); margin-top:6px; }
-
-    /* Input */
-    .foot-input{
-      flex:1; border:1px solid var(--card-border); background: rgba(8,12,28,0.6);
-      color:var(--text); padding: 10px 12px; border-radius:999px; outline:none;
-    }
+    .msg-text{ white-space:pre-wrap; }
+    .msg-meta{ font-size:12px; color:var(--muted); display:flex; gap:10px; align-items:center; }
+    .foot-input{ flex:1; }
     .foot-tog{ display:flex; align-items:center; gap:6px; font-size:13px; color:var(--muted); user-select:none; }
   </style>
 </head>
@@ -311,7 +283,7 @@
         <div id="feedLista" class="feed"></div>
       </div>
       <div class="modal-foot">
-        <input id="chatInput" class="foot-input" type="text" placeholder="Escreva uma mensagem..." />
+        <input id="chatInput" class="input foot-input" type="text" placeholder="Escreva uma mensagem..." />
         <label class="foot-tog">
           <input type="checkbox" id="chatLocToggle"> 📍 incluir localização
         </label>
@@ -326,8 +298,8 @@
   <!-- JS -->
   <script>
     /* ==== Cloud sync (Workers) ==== */
-    const SYNC_TO_CLOUD = false; // true quando seu Worker estiver no ar
-    const API_BASE = "https://smartcart-chat.SEU_SUBDOMINIO.workers.dev"; // troque pela sua URL
+    const SYNC_TO_CLOUD = false; // troque para true quando tiver seu Worker
+    const API_BASE = "https://smartcart-chat.SEU_SUBDOMINIO.workers.dev"; // sua URL depois
 
     // id único do aparelho (use o mesmo nos dois devices se quiser ver o mesmo feed)
     const DID_KEY = 'sc_device_id';
@@ -550,18 +522,6 @@
     document.getElementById('historicoModal').addEventListener('click', (e)=>{ if (e.target.id==='historicoModal') fecharHistorico(); });
     document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') { fecharHistorico(); fecharFeed(); } });
 
-    /* ===== Utils Chat ===== */
-    function shortName(id){ return (id && typeof id === 'string') ? 'ID ' + id.slice(-4) : 'Você'; }
-    function initials(name){ return (name||'V').trim().slice(0,2).toUpperCase(); }
-    function timeAgo(iso){
-      const d = new Date(iso); const s = Math.floor((Date.now() - d.getTime())/1000);
-      if (s < 5) return 'agora';
-      if (s < 60) return `${s}s`;
-      const m = Math.floor(s/60); if (m < 60) return `${m} min`;
-      const h = Math.floor(m/60); if (h < 24) return `${h} h`;
-      return d.toLocaleString('pt-BR');
-    }
-
     /* ===== OCR ===== */
     async function capturarImagemEProcessar() {
       if (ocrPaused || isProcessing || video.videoWidth === 0) return;
@@ -591,7 +551,6 @@
           const now = Date.now();
           if (now - lastSuggestionsAt >= SUGGESTIONS_COOLDOWN) {
             lastSuggestionsAt = now;
-
             limparSugestoes();
             matches.slice(0, 3).forEach(str => {
               const valor = parseFloat(str.replace(',', '.'));
@@ -605,14 +564,11 @@
             });
           }
         }
-      } catch (e) {
-        console.warn('OCR erro:', e);
-      } finally {
-        isProcessing = false;
-      }
+      } catch (e) { console.warn('OCR erro:', e); }
+      finally { isProcessing = false; }
     }
 
-    /* ===== Chat/Feed (posts + mensagens) ===== */
+    /* ===== Chat/Feed ===== */
     const FEED_LIMIT = 200;
     let feed = []; // it: {type:'post'|'msg', ...}
 
@@ -634,36 +590,29 @@
     async function abrirFeed(e){
       if (e) e.stopPropagation(); pauseOCR(true);
 
-      // Atualiza dos posts + mensagens da nuvem (se ligado)
+      // Atualiza dos posts da nuvem (mensagens continuam locais por enquanto)
       if (SYNC_TO_CLOUD) {
         try {
           const res = await fetch(`${API_BASE}/api/feed?deviceId=${encodeURIComponent(deviceId)}`);
           const data = await res.json();
-          if (data?.ok && Array.isArray(data.posts)) {
-            const posts = data.posts.map(p => ({
-              type:'post', id: p.id, ts: p.ts, valor: p.valor, img: p.img, coords: p.coords,
-              rating: p.rating || 0, status: p.status || 'pending', valid: p.valid || {yes:0,no:0},
-              author: p.deviceId
+          if (data && data.ok && Array.isArray(data.posts)) {
+            const newPosts = data.posts.map(p => ({
+              type:'post', id: p.id, ts: p.ts, valor: p.valor, img: p.img, coords: p.coords, rating: p.rating || 0,
+              status: p.status || 'pending', valid: p.valid || {yes:0,no:0}
             }));
-            let messages = [];
-            try {
-              const mres = await fetch(`${API_BASE}/api/messages?deviceId=${encodeURIComponent(deviceId)}`);
-              const mdata = await mres.json();
-              if (mdata?.ok && Array.isArray(mdata.messages)) {
-                messages = mdata.messages.map(m => ({ type:'msg', id: m.id, ts: m.ts, text: m.text, coords: m.coords, author: m.deviceId }));
-              }
-            } catch {}
-            const localMsgs = feed.filter(it => it.type==='msg' && !messages.some(m=>m.id===it.id));
-            feed = [...posts, ...messages, ...localMsgs].sort((a,b)=> new Date(b.ts) - new Date(a.ts));
+            const msgs = feed.filter(it => it.type === 'msg'); // preserva mensagens locais
+            feed = [...newPosts, ...msgs].sort((a,b)=> new Date(b.ts) - new Date(a.ts));
             if (feed.length > FEED_LIMIT) feed.length = FEED_LIMIT;
             saveFeed();
           }
         } catch(e){ console.warn('cloud feed erro:', e); }
       }
 
-      renderFeed();
+      const pendentes = []; // (slot para validações futuras)
+      renderFeed(pendentes);
       document.getElementById('feedModal').classList.add('show');
 
+      // foco no input do chat
       const ci = document.getElementById('chatInput');
       if (ci) { ci.focus(); ci.addEventListener('keydown', onChatKey); }
     }
@@ -674,101 +623,86 @@
     }
     function onChatKey(e){ if (e.key === 'Enter') enviarMensagem(); }
 
-    function renderFeed(){
+    function renderFeed(pendentes=[]){
       const lista = document.getElementById('feedLista');
       lista.innerHTML = '';
 
+      // (Opcional) seção de validações proximas no futuro
+      if (pendentes.length){
+        const head = document.createElement('div');
+        head.className = 'hist-item';
+        head.innerHTML = '<b>Ajude a validar preços perto de você</b>';
+        lista.appendChild(head);
+        // ... cards de pendentes aqui no futuro ...
+      }
+
+      // Render dos itens (mensagens + posts)
       const items = [...feed].sort((a,b)=> new Date(b.ts) - new Date(a.ts));
       if (!items.length){
         const empty = document.createElement('div');
         empty.className = 'hist-item';
-        empty.textContent = 'Seu chat está vazio. Ative “Enviar para o chat” ou escreva uma mensagem abaixo.';
+        empty.textContent = 'Seu chat está vazio. Ative “Enviar para o chat” para postar fotos, ou escreva uma mensagem abaixo.';
         lista.appendChild(empty);
         return;
       }
 
       items.forEach(p=>{
-        const isMe = (p.author ? p.author === deviceId : true);
-        const name = isMe ? 'Você' : shortName(p.author);
-        const avatarText = initials(name);
-
         if (p.type === 'msg'){
-          const card = document.createElement('div'); card.className = 'fb-card msg-card';
-          const line = document.createElement('div'); line.className = 'msg-line';
+          const card = document.createElement('div');
+          card.className = 'msg';
+          const text = document.createElement('div');
+          text.className = 'msg-text';
+          text.textContent = p.text || '';
+          const meta = document.createElement('div');
+          meta.className = 'msg-meta';
+          const when = new Date(p.ts).toLocaleString('pt-BR');
+          meta.textContent = when + (p.coords ? ' · com localização' : '');
+          const actions = document.createElement('div');
+          actions.className = 'actions';
+          const btnMap = document.createElement('button');
+          btnMap.className = 'btn-ghost'; btnMap.textContent = '📍 Rota';
+          if (p.coords){ btnMap.onclick = ()=> window.open(mapsRoute(p.coords.lat, p.coords.lng), '_blank'); }
+          else { btnMap.disabled = true; }
+          const btnShare = document.createElement('button');
+          btnShare.className = 'btn-ghost'; btnShare.textContent = '🔗 Compartilhar';
+          btnShare.onclick = ()=> shareMessage(p);
+          actions.appendChild(btnMap); actions.appendChild(btnShare);
 
-          const av = document.createElement('div'); av.className='avatar'; av.textContent = avatarText;
-
-          const bubble = document.createElement('div'); bubble.className = 'bubble' + (isMe ? ' me' : '');
-          const text = document.createElement('div'); text.className = 'msg-text'; text.textContent = p.text || '';
-          const meta = document.createElement('div'); meta.className = 'msg-meta';
-          meta.textContent = `${name} · ${timeAgo(p.ts)}${p.coords ? ' · com localização' : ''}`;
-
-          bubble.appendChild(text); bubble.appendChild(meta);
-
-          if (isMe){ // eu à direita (estilo chat)
-            line.style.justifyContent = 'flex-end';
-            line.appendChild(bubble); line.appendChild(av);
-          } else {
-            line.appendChild(av); line.appendChild(bubble);
-          }
-
-          card.appendChild(line);
+          card.appendChild(text);
+          card.appendChild(meta);
+          card.appendChild(actions);
           lista.appendChild(card);
-        } else {
-          // Post (foto + preço) estilo card de feed
-          const card = document.createElement('div'); card.className = 'fb-card';
+        } else { // post (foto + preço)
+          const card = document.createElement('div'); card.className = 'post';
+          const img = document.createElement('img'); img.className = 'post-img'; img.src = p.img; img.alt = `Preço: R$ ${Number(p.valor).toFixed(2)}`;
+          const body = document.createElement('div'); body.className = 'post-body';
+          const title = document.createElement('div'); title.className='post-title';
+          const price = document.createElement('div'); price.className='price'; price.textContent = 'R$ ' + Number(p.valor).toFixed(2);
+          const when = document.createElement('div'); when.className='loc'; when.textContent = new Date(p.ts).toLocaleString('pt-BR') + (p.coords ? ' · Com localização' : ' · Sem localização');
+          title.appendChild(price); title.appendChild(when);
 
-          // header
-          const head = document.createElement('div'); head.className = 'fb-header';
-          const av = document.createElement('div'); av.className='avatar'; av.textContent = avatarText;
-          const info = document.createElement('div'); info.style.display='flex'; info.style.flexDirection='column';
-          const nm = document.createElement('div'); nm.className='author'; nm.textContent = name;
-          const tm = document.createElement('div'); tm.className='time';
-          tm.textContent = `${timeAgo(p.ts)}${p.coords ? ' · com localização' : ''}`;
-          info.appendChild(nm); info.appendChild(tm);
-          head.appendChild(av); head.appendChild(info);
-          card.appendChild(head);
-
-          // media
-          if (p.img){
-            const img = document.createElement('img'); img.className='media'; img.src = p.img; img.alt = `Preço: R$ ${Number(p.valor).toFixed(2)}`;
-            card.appendChild(img);
-          }
-
-          // body
-          const body = document.createElement('div'); body.className='fb-body';
-          const price = document.createElement('div'); price.className='price-badge';
-          price.textContent = 'R$ ' + Number(p.valor).toFixed(2);
-          const badge = document.createElement('div'); badge.className='subtext';
+          const badge = document.createElement('div'); badge.className='loc';
           if (p.status === 'confirmed') badge.textContent = `✔ Validado por ${p.valid?.yes||0}`;
           else if (p.status === 'rejected') badge.textContent = `⚠ Reprovado (${p.valid?.no||0})`;
           else badge.textContent = `⏳ Aguardando validação`;
-          body.appendChild(price);
-          body.appendChild(badge);
-          card.appendChild(body);
 
-          // actions
-          const actions = document.createElement('div'); actions.className='fb-actions';
-          const left = document.createElement('div'); left.className='act-row';
-          const right = document.createElement('div'); right.className='act-row';
-
-          const btnOk = document.createElement('button'); btnOk.className='act' + (p.rating === 1 ? ' active' : ''); btnOk.textContent='👍 Bom';
+          const actions = document.createElement('div'); actions.className='actions';
+          const btnOk = document.createElement('button'); btnOk.className='btn-ghost' + (p.rating === 1 ? ' active' : ''); btnOk.textContent='👍 Bom';
           btnOk.onclick = ()=> setRating(p.id, 1);
-          const btnBad = document.createElement('button'); btnBad.className='act' + (p.rating === -1 ? ' active' : ''); btnBad.textContent='👎 Ruim';
+          const btnBad = document.createElement('button'); btnBad.className='btn-ghost' + (p.rating === -1 ? ' active' : ''); btnBad.textContent='👎 Ruim';
           btnBad.onclick = ()=> setRating(p.id, -1);
-
-          left.appendChild(btnOk); left.appendChild(btnBad);
-
-          const btnMap = document.createElement('button'); btnMap.className='act'; btnMap.textContent='📍 Rota';
+          const btnMap = document.createElement('button'); btnMap.className='btn-ghost'; btnMap.textContent='📍 Rota';
           if (p.coords){ btnMap.onclick = ()=> window.open(mapsRoute(p.coords.lat, p.coords.lng), '_blank'); }
           else { btnMap.disabled = true; }
-          const btnShare = document.createElement('button'); btnShare.className='act'; btnShare.textContent='🔗 Compartilhar';
+          const btnShare = document.createElement('button'); btnShare.className='btn-ghost'; btnShare.textContent='🔗 Compartilhar';
           btnShare.onclick = ()=> sharePost(p);
-          right.appendChild(btnMap); right.appendChild(btnShare);
+          actions.appendChild(btnOk); actions.appendChild(btnBad); actions.appendChild(btnMap); actions.appendChild(btnShare);
 
-          actions.appendChild(left); actions.appendChild(right);
-          card.appendChild(actions);
+          body.appendChild(title);
+          body.appendChild(badge);
+          body.appendChild(actions);
 
+          card.appendChild(img); card.appendChild(body);
           lista.appendChild(card);
         }
       });
@@ -814,47 +748,29 @@
       }
     }
 
-    /* ===== Enviar mensagem de texto (com sync) ===== */
-    async function enviarMensagem(){
+    /* ===== Enviar mensagem de texto ===== */
+    function enviarMensagem(){
       const input = document.getElementById('chatInput');
       let text = (input.value || '').trim();
       if (!text) { input.focus(); return; }
       const wantLoc = document.getElementById('chatLocToggle').checked;
 
-      const pushLocal = (coords, id=null, ts=null) => {
-        const item = { type:'msg', id: id || (Date.now() + '_' + Math.random().toString(36).slice(2,7)), ts: ts || new Date().toISOString(), text, coords: coords || null, author: deviceId };
-        pushFeed(item); renderFeed(); input.value=''; input.focus();
+      const id = Date.now() + '_' + Math.random().toString(36).slice(2,7);
+      const ts = new Date().toISOString();
+
+      const add = (coords)=> {
+        pushFeed({ type:'msg', id, ts, text, coords: coords || null, author: deviceId });
+        renderFeed();
+        input.value = ''; input.focus();
       };
 
-      if (SYNC_TO_CLOUD) {
-        let coords = null;
-        if (wantLoc && navigator.geolocation){
-          try {
-            const pos = await new Promise((res, rej)=> navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy:true, timeout:7000 }));
-            coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          } catch {}
-        }
-        try{
-          const res = await fetch(`${API_BASE}/api/message`, {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ deviceId, text, coords })
-          });
-          const data = await res.json();
-          if (data?.ok && data.message){
-            pushLocal(data.message.coords || null, data.message.id, data.message.ts);
-            return;
-          }
-        }catch(e){ console.warn('cloud msg erro:', e); }
-        pushLocal(coords || null); // fallback local
-      } else {
-        if (wantLoc && navigator.geolocation){
-          navigator.geolocation.getCurrentPosition(
-            pos => pushLocal({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-            ()  => pushLocal(null),
-            { enableHighAccuracy:true, timeout:7000 }
-          );
-        } else pushLocal(null);
-      }
+      if (wantLoc && navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(
+          pos => add({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          () => add(null),
+          { enableHighAccuracy:true, timeout:7000 }
+        );
+      } else add(null);
     }
 
     /* ===== Limpar chat ===== */
@@ -868,10 +784,12 @@
     /* ===== Captura foto + envia para chat (post) ===== */
     async function capturarEEnviarImagem(valor) {
       try {
+        // snapshot original
         const fullCanvas = document.createElement('canvas');
         fullCanvas.width = video.videoWidth;
         fullCanvas.height = video.videoHeight;
         fullCanvas.getContext('2d').drawImage(video, 0, 0);
+        // thumb compacta para o feed
         const maxW = 640;
         let tw = fullCanvas.width, th = fullCanvas.height;
         if (tw > maxW){ const s = maxW / tw; tw = Math.max(1, Math.round(tw*s)); th = Math.max(1, Math.round(th*s)); }
@@ -881,13 +799,14 @@
         const imageThumb = thumb.toDataURL('image/jpeg', 0.7);
 
         if (shareToChat) {
+          // pega localização (opcional)
           navigator.geolocation.getCurrentPosition(async (position) => {
             const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
 
             // chat local
             pushFeed({ type:'post', id: Date.now() + '_' + Math.random().toString(36).slice(2,7),
                        ts: new Date().toISOString(), valor: +valor, img: imageThumb, coords, rating: 0,
-                       status:'pending', valid:{yes:0,no:0}, author: deviceId });
+                       status:'pending', valid:{yes:0,no:0} });
 
             // nuvem (opcional)
             if (SYNC_TO_CLOUD) {
@@ -902,7 +821,7 @@
           }, async () => {
             pushFeed({ type:'post', id: Date.now() + '_' + Math.random().toString(36).slice(2,7),
                        ts: new Date().toISOString(), valor: +valor, img: imageThumb, coords: null, rating: 0,
-                       status:'pending', valid:{yes:0,no:0}, author: deviceId });
+                       status:'pending', valid:{yes:0,no:0} });
 
             if (SYNC_TO_CLOUD) {
               try {
@@ -928,6 +847,21 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
