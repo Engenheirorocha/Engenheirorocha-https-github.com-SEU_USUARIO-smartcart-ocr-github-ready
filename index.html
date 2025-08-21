@@ -140,9 +140,21 @@
     }
     .modal-title{ font-weight:700; letter-spacing:.3px }
     .modal-body{ overflow:auto; padding-top:10px; }
+
+    /* RODAPÉ DO CHAT AJUSTADO */
     .modal-foot{
-      border-top:1px dashed var(--card-border); margin-top:10px; padding-top:10px;
-      display:flex; gap:8px; align-items:center; position:sticky; bottom:0; background:var(--card);
+      border-top:1px dashed var(--card-border);
+      margin-top:10px; padding:10px;
+      position:sticky; bottom:0; background:var(--card);
+      display:grid;
+      grid-template-columns: 1fr auto auto; /* [input] [toggle] [enviar] */
+      gap:8px; align-items:center;
+    }
+    .foot-input{ flex:1; min-width:0; }
+    .foot-tog{ display:flex; align-items:center; gap:6px; font-size:13px; color:var(--muted); user-select:none; white-space:nowrap; }
+    @media (max-width:600px){
+      .modal-foot{ grid-template-columns: 1fr; }
+      .foot-tog, .modal-foot .btn{ width:100%; justify-self:stretch; }
     }
 
     /* Histórico */
@@ -155,8 +167,6 @@
     .pill{ padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid var(--card-border); }
     .pill.add{ color:#d9ffe9; background: rgba(24,42,30,0.7); border-color: rgba(72,140,92,0.45) }
     .pill.sub{ color:#ffe0e0; background: rgba(52,24,24,0.6); border-color: rgba(164,74,74,0.45) }
-    .hist-val{ font-weight:700 }
-    .hist-time{ color: var(--muted); font-size:12px }
 
     /* ===== Chat/Feed ===== */
     .feed{ display:flex; flex-direction:column; gap:12px; }
@@ -184,8 +194,6 @@
     }
     .msg-text{ white-space:pre-wrap; }
     .msg-meta{ font-size:12px; color:var(--muted); display:flex; gap:10px; align-items:center; }
-    .foot-input{ flex:1; }
-    .foot-tog{ display:flex; align-items:center; gap:6px; font-size:13px; color:var(--muted); user-select:none; }
   </style>
 </head>
 <body>
@@ -287,7 +295,7 @@
         <label class="foot-tog">
           <input type="checkbox" id="chatLocToggle"> 📍 incluir localização
         </label>
-        <button class="btn ok" onclick="enviarMensagem()">Enviar</button>
+        <button class="btn ok" onclick="enviarMensagem()">📨 Enviar</button>
       </div>
     </div>
   </div>
@@ -824,6 +832,7 @@
   </script>
 </body>
 </html>
+
 
 
 
