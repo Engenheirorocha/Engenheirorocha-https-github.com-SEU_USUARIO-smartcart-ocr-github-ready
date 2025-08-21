@@ -186,6 +186,17 @@
     .msg-meta{ font-size:12px; color:var(--muted); display:flex; gap:10px; align-items:center; }
     .foot-input{ flex:1; }
     .foot-tog{ display:flex; align-items:center; gap:6px; font-size:13px; color:var(--muted); user-select:none; }
+
+    /* Toast */
+    .toast{
+      position: fixed; left:50%; bottom:18px; transform:translateX(-50%);
+      background: rgba(8,12,28,0.85); color:var(--text);
+      border:1px solid var(--card-border); border-radius:12px; padding:10px 14px;
+      box-shadow: var(--shadow); z-index:1000; display:none;
+    }
+    .toast.show{ display:block; }
+    .toast.err{ border-color: rgba(164,74,74,0.45) }
+    .toast.ok{ border-color: rgba(72,140,92,0.45) }
   </style>
 </head>
 <body>
@@ -292,6 +303,9 @@
     </div>
   </div>
 
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
   <!-- Audio -->
   <audio id="bip-audio" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
 
@@ -301,7 +315,7 @@
     const SYNC_TO_CLOUD = false; // troque para true quando tiver seu Worker
     const API_BASE = "https://smartcart-chat.SEU_SUBDOMINIO.workers.dev"; // sua URL depois
 
-    // id único do aparelho (use o mesmo nos dois devices se quiser ver o mesmo feed)
+    // id único do aparelho
     const DID_KEY = 'sc_device_id';
     let deviceId = localStorage.getItem(DID_KEY);
     if (!deviceId) {
@@ -315,6 +329,7 @@
     const precosDiv = document.getElementById('precos');
     const somaSpan = document.getElementById('soma');
     const bip = document.getElementById('bip-audio');
+    const toastEl = document.getElementById('toast');
 
     /* ===== Histórico sessão ===== */
     const historico = []; // {tipo:'add'|'sub', valor, data, total}
@@ -406,6 +421,15 @@
     function pauseOCR(v){ ocrPaused = !!v; }
     document.addEventListener('visibilitychange', ()=>{ pauseOCR(document.hidden); });
 
+    /* ===== Toast ===== */
+    let toastTimer = null;
+    function showToast(msg, type='ok', ms=2200){
+      toastEl.textContent = msg;
+      toastEl.className = `toast show ${type}`;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(()=> toastEl.className = 'toast', ms);
+    }
+
     /* ===== Câmera com fallback ===== */
     async function iniciarCamera() {
       const modos = [
@@ -424,7 +448,7 @@
           ok = true; break;
         } catch (e) { lastErr = e; }
       }
-      if (!ok) alert("Erro ao acessar a câmera: " + (lastErr && lastErr.message ? lastErr.message : lastErr));
+      if (!ok) showToast("Erro ao acessar a câmera: " + (lastErr && lastErr.message ? lastErr.message : lastErr), 'err', 4000);
     }
 
     /* ===== Somatório ===== */
@@ -442,7 +466,10 @@
     function adicionarManual() {
       const input = document.getElementById('manualInput');
       const valor = parseFloat((input.value || '').replace(',', '.'));
-      if (isNaN(valor) || valor <= 0) { alert("Digite um valor válido."); input.value=''; input.focus(); return; }
+      if (!Number.isFinite(valor) || valor <= 0 || valor > 9999) {
+        showToast("Valor inválido. Use algo entre 0,01 e 9.999,00.", 'err');
+        input.value=''; input.focus(); return;
+      }
       total += valor; valoresAdicionados.push(valor);
       somaSpan.innerText = total.toFixed(2);
       limparSugestoes(); sugestoesFixas = false; bip.play();
@@ -454,7 +481,9 @@
     function diminuirManual() {
       const input = document.getElementById('manualInput');
       const valor = parseFloat((input.value || '').replace(',', '.'));
-      if (isNaN(valor) || valor <= 0) { alert("Digite um valor válido."); input.value=''; input.focus(); return; }
+      if (!Number.isFinite(valor) || valor <= 0 || valor > 9999) {
+        showToast("Valor inválido para diminuir.", 'err'); input.value=''; input.focus(); return;
+      }
       total -= valor; if (total < 0) total = 0;
       valoresAdicionados.push(-valor);
       somaSpan.innerText = total.toFixed(2);
@@ -472,6 +501,7 @@
       localStorage.removeItem(LS_KEYS.valores);
       localStorage.removeItem(LS_KEYS.historico);
       saveFeed(); // não apaga o chat
+      showToast("Total zerado.", 'ok');
     }
 
     function desfazerUltimo() {
@@ -480,6 +510,7 @@
         total -= valor; if (total < 0) total = 0;
         somaSpan.innerText = total.toFixed(2);
         saveState();
+        showToast("Última ação desfeita.", 'ok');
       }
     }
 
@@ -522,9 +553,28 @@
     document.getElementById('historicoModal').addEventListener('click', (e)=>{ if (e.target.id==='historicoModal') fecharHistorico(); });
     document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') { fecharHistorico(); fecharFeed(); } });
 
-    /* ===== OCR ===== */
+    /* ===== OCR (worker único) ===== */
+    let ocrWorker = null;
+    async function initOCR(){
+      ocrWorker = await Tesseract.createWorker('eng');
+    }
+
+    function parsePrices(text){
+      // regex mais permissiva + opcional centavos; filtra faixa e dedup
+      const raw = text.match(/\b\d{1,4}(?:[.,]\d{2})?\b/g) || [];
+      const nums = raw
+        .map(s => parseFloat(s.replace(',', '.')))
+        .filter(v => Number.isFinite(v) && v > 0 && v <= 9999);
+      // dedupe com tolerância de 0,01
+      const out = [];
+      nums.forEach(v=>{
+        if (!out.some(x => Math.abs(x - v) < 0.01)) out.push(v);
+      });
+      return out.slice(0, 3);
+    }
+
     async function capturarImagemEProcessar() {
-      if (ocrPaused || isProcessing || video.videoWidth === 0) return;
+      if (ocrPaused || isProcessing || video.videoWidth === 0 || !ocrWorker) return;
       isProcessing = true; desenharROI();
       const ctx = canvas.getContext('2d');
 
@@ -545,27 +595,25 @@
       if (ctx.filter !== undefined) ctx.filter = 'none';
 
       try {
-        const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
-        const matches = text.match(/\d{1,3}(?:[.,]\d{2})/g);
-        if (matches) {
-          const now = Date.now();
-          if (now - lastSuggestionsAt >= SUGGESTIONS_COOLDOWN) {
-            lastSuggestionsAt = now;
-            limparSugestoes();
-            matches.slice(0, 3).forEach(str => {
-              const valor = parseFloat(str.replace(',', '.'));
-              if (!isNaN(valor) && valor > 0) {
-                const btn = document.createElement('div');
-                btn.className = 'preco-btn';
-                btn.innerText = `R$ ${valor.toFixed(2)}`;
-                btn.onclick = () => adicionarPreco(valor, btn);
-                precosDiv.appendChild(btn);
-              }
-            });
-          }
+        const { data: { text } } = await ocrWorker.recognize(canvas);
+        const vals = parsePrices(text);
+        const now = Date.now();
+        if (vals.length && (now - lastSuggestionsAt >= SUGGESTIONS_COOLDOWN)) {
+          lastSuggestionsAt = now;
+          limparSugestoes();
+          vals.forEach(valor => {
+            const btn = document.createElement('div');
+            btn.className = 'preco-btn';
+            btn.innerText = `R$ ${valor.toFixed(2)}`;
+            btn.onclick = () => adicionarPreco(valor, btn);
+            precosDiv.appendChild(btn);
+          });
         }
-      } catch (e) { console.warn('OCR erro:', e); }
-      finally { isProcessing = false; }
+      } catch (e) {
+        console.warn('OCR erro:', e);
+      } finally {
+        isProcessing = false;
+      }
     }
 
     /* ===== Chat/Feed ===== */
@@ -590,7 +638,6 @@
     async function abrirFeed(e){
       if (e) e.stopPropagation(); pauseOCR(true);
 
-      // Atualiza dos posts da nuvem (mensagens continuam locais por enquanto)
       if (SYNC_TO_CLOUD) {
         try {
           const res = await fetch(`${API_BASE}/api/feed?deviceId=${encodeURIComponent(deviceId)}`);
@@ -600,7 +647,7 @@
               type:'post', id: p.id, ts: p.ts, valor: p.valor, img: p.img, coords: p.coords, rating: p.rating || 0,
               status: p.status || 'pending', valid: p.valid || {yes:0,no:0}
             }));
-            const msgs = feed.filter(it => it.type === 'msg'); // preserva mensagens locais
+            const msgs = feed.filter(it => it.type === 'msg');
             feed = [...newPosts, ...msgs].sort((a,b)=> new Date(b.ts) - new Date(a.ts));
             if (feed.length > FEED_LIMIT) feed.length = FEED_LIMIT;
             saveFeed();
@@ -608,11 +655,10 @@
         } catch(e){ console.warn('cloud feed erro:', e); }
       }
 
-      const pendentes = []; // (slot para validações futuras)
+      const pendentes = [];
       renderFeed(pendentes);
       document.getElementById('feedModal').classList.add('show');
 
-      // foco no input do chat
       const ci = document.getElementById('chatInput');
       if (ci) { ci.focus(); ci.addEventListener('keydown', onChatKey); }
     }
@@ -627,16 +673,13 @@
       const lista = document.getElementById('feedLista');
       lista.innerHTML = '';
 
-      // (Opcional) seção de validações proximas no futuro
       if (pendentes.length){
         const head = document.createElement('div');
         head.className = 'hist-item';
         head.innerHTML = '<b>Ajude a validar preços perto de você</b>';
         lista.appendChild(head);
-        // ... cards de pendentes aqui no futuro ...
       }
 
-      // Render dos itens (mensagens + posts)
       const items = [...feed].sort((a,b)=> new Date(b.ts) - new Date(a.ts));
       if (!items.length){
         const empty = document.createElement('div');
@@ -672,7 +715,7 @@
           card.appendChild(meta);
           card.appendChild(actions);
           lista.appendChild(card);
-        } else { // post (foto + preço)
+        } else {
           const card = document.createElement('div'); card.className = 'post';
           const img = document.createElement('img'); img.className = 'post-img'; img.src = p.img; img.alt = `Preço: R$ ${Number(p.valor).toFixed(2)}`;
           const body = document.createElement('div'); body.className = 'post-body';
@@ -734,7 +777,6 @@
     function setRating(id, v){
       const idx = feed.findIndex(p=>p.type==='post' && p.id===id);
       if (idx === -1) return;
-      // alterna: se já está, zera
       feed[idx].rating = (feed[idx].rating === v) ? 0 : v;
       saveFeed();
       renderFeed();
@@ -773,80 +815,33 @@
       } else add(null);
     }
 
-    /* ===== Limpar chat ===== */
+    /* ===== Limpar chat (clique duplo p/ confirmar) ===== */
+    let clearArm = false, clearTimer = null;
     function limparFeed(){
-      if (!confirm('Limpar todo o chat?')) return;
+      if (!clearArm){
+        clearArm = true;
+        showToast("Clique novamente em até 5s para limpar o chat.", 'warn', 3000);
+        clearTimer = setTimeout(()=>{ clearArm=false; }, 5000);
+        return;
+      }
+      clearArm = false; clearTimer && clearTimeout(clearTimer);
       feed = [];
       saveFeed();
       renderFeed();
+      showToast("Chat limpo.", 'ok');
     }
 
     /* ===== Captura foto + envia para chat (post) ===== */
     async function capturarEEnviarImagem(valor) {
       try {
-        // snapshot original
         const fullCanvas = document.createElement('canvas');
         fullCanvas.width = video.videoWidth;
         fullCanvas.height = video.videoHeight;
         fullCanvas.getContext('2d').drawImage(video, 0, 0);
-        // thumb compacta para o feed
         const maxW = 640;
         let tw = fullCanvas.width, th = fullCanvas.height;
         if (tw > maxW){ const s = maxW / tw; tw = Math.max(1, Math.round(tw*s)); th = Math.max(1, Math.round(th*s)); }
         const thumb = document.createElement('canvas');
-        thumb.width = tw; thumb.height = th;
-        thumb.getContext('2d').drawImage(fullCanvas, 0, 0, tw, th);
-        const imageThumb = thumb.toDataURL('image/jpeg', 0.7);
-
-        if (shareToChat) {
-          // pega localização (opcional)
-          navigator.geolocation.getCurrentPosition(async (position) => {
-            const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
-
-            // chat local
-            pushFeed({ type:'post', id: Date.now() + '_' + Math.random().toString(36).slice(2,7),
-                       ts: new Date().toISOString(), valor: +valor, img: imageThumb, coords, rating: 0,
-                       status:'pending', valid:{yes:0,no:0} });
-
-            // nuvem (opcional)
-            if (SYNC_TO_CLOUD) {
-              try {
-                await fetch(`${API_BASE}/api/post`, {
-                  method: 'POST',
-                  headers: { 'Content-Type':'application/json' },
-                  body: JSON.stringify({ deviceId, valor:+valor, coords, imageData:imageThumb })
-                });
-              } catch(e){ console.warn('cloud post erro:', e); }
-            }
-          }, async () => {
-            pushFeed({ type:'post', id: Date.now() + '_' + Math.random().toString(36).slice(2,7),
-                       ts: new Date().toISOString(), valor: +valor, img: imageThumb, coords: null, rating: 0,
-                       status:'pending', valid:{yes:0,no:0} });
-
-            if (SYNC_TO_CLOUD) {
-              try {
-                await fetch(`${API_BASE}/api/post`, {
-                  method: 'POST',
-                  headers: { 'Content-Type':'application/json' },
-                  body: JSON.stringify({ deviceId, valor:+valor, coords:null, imageData:imageThumb })
-                });
-              } catch(e){ console.warn('cloud post erro:', e); }
-            }
-          });
-        }
-      } catch (e) {
-        console.warn('snapshot/geo erro:', e);
-      }
-    }
-
-    // ===== Inicialização =====
-    setInterval(capturarImagemEProcessar, 1200);
-    iniciarCamera();
-    loadState();
-    initShareToggle();
-  </script>
-</body>
-</html>
 
 
 
