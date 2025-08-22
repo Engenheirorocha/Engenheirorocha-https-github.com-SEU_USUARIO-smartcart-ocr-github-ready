@@ -175,6 +175,9 @@
     .pill.sub{ color:#ffe0e0; background: rgba(52,24,24,0.6); border-color: rgba(164,74,74,0.45) }
 
     /* ===== Chat/Feed ===== */
+    #feedScroll{ /* container que realmente rola */
+      overflow: auto;
+    }
     .feed{ display:flex; flex-direction:column; gap:12px; }
     .post{
       border:1px solid var(--card-border); border-radius:14px; background: rgba(8,12,28,0.55);
@@ -283,7 +286,7 @@
           <button class="btn" onclick="fecharFeed()">✖ Fechar</button>
         </div>
       </div>
-      <div class="modal-body">
+      <div class="modal-body" id="feedScroll">
         <div id="feedLista" class="feed"></div>
       </div>
       <div class="modal-foot">
@@ -430,12 +433,9 @@
       try{
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videos = devices.filter(d => d.kind === 'videoinput');
-        // tenta por label primeiro
         let candidate = videos.find(d => looksLikeBackLabel(d.label));
-        // senão, muitas vezes a traseira é a última
         if (!candidate && videos.length) candidate = videos[videos.length - 1];
         if (candidate){
-          // se já estamos nela, sai
           const track = currentStream && currentStream.getVideoTracks()[0];
           const settings = track ? track.getSettings() : {};
           if (settings && settings.deviceId === candidate.deviceId) return;
@@ -447,29 +447,24 @@
     async function iniciarCamera(){
       let lastErr;
 
-      // 1) tenta direto a traseira via facingMode (exato)
       try{
         await startWithConstraints({ video: { facingMode: { exact: 'environment' } }, audio:false });
-        // ainda assim, alguns aparelhos dão frontal: tenta troca por deviceId após permissão
         await trySwitchToRearByDeviceId();
         return;
       }catch(e){ lastErr = e; }
 
-      // 2) ideal environment
       try{
         await startWithConstraints({ video: { facingMode: { ideal: 'environment' } }, audio:false });
         await trySwitchToRearByDeviceId();
         return;
       }catch(e){ lastErr = e; }
 
-      // 3) genérico (para liberar labels) e depois troca para traseira por deviceId
       try{
         await startWithConstraints({ video: true, audio:false });
         await trySwitchToRearByDeviceId();
         return;
       }catch(e){ lastErr = e; }
 
-      // 4) último recurso
       try{
         await startWithConstraints({ video: true, audio:false });
         return;
@@ -512,7 +507,7 @@
       limparSugestoes(); sugestoesFixas = false; bip.play();
       registrar('add', valor);
       saveState();
-      input.value=''; input.focus();
+      input.value=''; input.blur();
     }
 
     function diminuirManual() {
@@ -525,7 +520,7 @@
       limparSugestoes(); sugestoesFixas = false; bip.play();
       registrar('sub', valor);
       saveState();
-      input.value=''; input.focus();
+      input.value=''; input.blur();
     }
 
     function zerarTotal() {
@@ -682,20 +677,27 @@
       renderFeed();
     }
 
+    /* ===== Scroll helpers ===== */
+    function getFeedScroller(){
+      return document.getElementById('feedScroll'); // quem de fato rola
+    }
     function isNearBottom(el){
       if (!el) return true;
       return (el.scrollHeight - el.scrollTop - el.clientHeight) < 40;
     }
-
     function jumpToBottom(){
-      const lista = document.getElementById('feedLista');
-      if (!lista) return;
+      const scroller = getFeedScroller();
+      if (!scroller) return;
       requestAnimationFrame(()=>{
-        lista.scrollTop = lista.scrollHeight;
+        scroller.scrollTop = scroller.scrollHeight;
         requestAnimationFrame(()=>{
-          lista.scrollTop = lista.scrollHeight;
+          scroller.scrollTop = scroller.scrollHeight; // garante após imagens
         });
       });
+    }
+    function maybeJumpToBottom(){
+      const scroller = getFeedScroller();
+      if (isNearBottom(scroller)) jumpToBottom();
     }
 
     async function abrirFeed(e){
@@ -730,7 +732,7 @@
       feedOpen = true;
       history.pushState({feed:true}, '');
 
-      // ao abrir, colar no fim (mensagem mais recente)
+      // ao abrir, cola no fim (mensagem mais recente imediatamente visível)
       jumpToBottom();
     }
 
@@ -743,17 +745,16 @@
       feedOpen = false;
       pauseOCR(false);
     }
-    window.addEventListener('popstate', (e)=>{
+    window.addEventListener('popstate', ()=>{
       if (feedOpen){
         fecharFeedInternal();
       }
     });
 
-    function onChatKey(e){ if (e.key === 'Enter') enviarMensagem(); }
-
     function renderFeed(){
       const lista = document.getElementById('feedLista');
-      const stick = isNearBottom(lista);
+      const scroller = getFeedScroller();
+      const stick = isNearBottom(scroller); // mede no container correto
 
       if (lista) lista.innerHTML = '';
 
@@ -803,8 +804,9 @@
             img.loading = 'lazy';
             img.decoding = 'async';
             img.onload = () => {
-              const l = document.getElementById('feedLista');
-              if (isNearBottom(l)) jumpToBottom();
+              // se o usuário está colado no fim, mantém colado após a imagem carregar
+              const scr = getFeedScroller();
+              if (isNearBottom(scr)) jumpToBottom();
             };
 
             const body = document.createElement('div'); body.className = 'post-body';
@@ -823,7 +825,6 @@
             title.appendChild(left); title.appendChild(when);
 
             const actions = document.createElement('div'); actions.className='actions';
-
             const btnMap = document.createElement('button'); btnMap.className='btn-ghost'; btnMap.textContent='📍 Rota';
             if (p.coords){ btnMap.onclick = ()=> window.open(mapsRoute(p.coords.lat, p.coords.lng), '_blank'); }
             else { btnMap.disabled = true; }
@@ -867,7 +868,8 @@
         });
       }
 
-      if (stick && lista) jumpToBottom();
+      // se estava colado no fim antes de renderizar, cola de novo no fim
+      if (stick) jumpToBottom();
     }
 
     function sharePost(p){
@@ -906,7 +908,7 @@
       const add = (coords)=> {
         pushFeed({ type:'msg', id, ts, text, coords: coords || null, author: deviceId });
         renderFeed();
-        jumpToBottom();
+        maybeJumpToBottom(); // só cola no fim se o usuário já estava no fim
         input.value = '';
         input.blur();
       };
@@ -959,7 +961,7 @@
             voters: {}
           });
           renderFeed();
-          jumpToBottom();
+          maybeJumpToBottom();
         };
 
         if (navigator.geolocation){
@@ -1051,7 +1053,7 @@
               voters: {}
             });
             renderFeed();
-            jumpToBottom();
+            maybeJumpToBottom();
 
             if (SYNC_TO_CLOUD) {
               try {
@@ -1075,7 +1077,7 @@
               voters: {}
             });
             renderFeed();
-            jumpToBottom();
+            maybeJumpToBottom();
 
             if (SYNC_TO_CLOUD) {
               try {
