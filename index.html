@@ -116,7 +116,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 .preco-btn:hover{ transform: translateY(-1px); box-shadow: 0 12px 26px rgba(7,20,12,0.45); filter: brightness(1.03); }
 .preco-btn.pulse{ transform: scale(1.04) }
 
-/* Inputs/botões */
+/* Inputs e multiplicação */
 .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
 .input{
   border:1px solid var(--card-border); background: rgba(10,14,32,0.55);
@@ -131,7 +131,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 .input-qty{ width:92px; text-align:center; }
 .mult-group{ display:flex; gap:8px; align-items:center; }
 
-/* Botões */
+/* Botões base */
 .btn{
   border:1px solid var(--card-border);
   background: linear-gradient(180deg, rgba(14,20,42,0.85), rgba(10,16,34,0.85));
@@ -144,6 +144,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 .btn:active{ transform: translateY(0); filter: brightness(0.98); }
 .btn:focus-visible{ outline:none; box-shadow: 0 0 0 3px rgba(127,180,255,0.25); }
 
+/* Hierarquia */
 .btn.ok{
   background: linear-gradient(180deg, rgba(22,56,42,0.95), rgba(18,44,34,0.95));
   border-color: rgba(52,211,153,0.55);
@@ -153,7 +154,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   box-shadow: 0 10px 24px rgba(36,160,120,0.35), 0 0 0 1px rgba(52,211,153,0.35) inset;
   border-color: rgba(52,211,153,0.75);
 }
-
 .btn.warn{
   background: linear-gradient(180deg, rgba(58,46,20,0.95), rgba(42,32,14,0.95));
   border-color: rgba(245,197,106,0.55);
@@ -163,7 +163,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   box-shadow: 0 10px 24px rgba(210,165,75,0.35), 0 0 0 1px rgba(245,197,106,0.35) inset;
   border-color: rgba(245,197,106,0.75);
 }
-
 .btn.err{
   background: linear-gradient(180deg, rgba(64,28,28,0.96), rgba(40,18,18,0.96));
   border-color: rgba(255,122,122,0.55);
@@ -173,6 +172,25 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   box-shadow: 0 10px 24px rgba(160,70,70,0.35), 0 0 0 1px rgba(255,122,122,0.35) inset;
   border-color: rgba(255,122,122,0.75);
 }
+
+/* NOVO: coluna de botões padronizados (mesmo tamanho) */
+.btn-col{
+  display:flex; flex-direction:column; gap:10px;
+}
+.btn.block{
+  width:100%;
+  min-height:44px;          /* altura consistente */
+  display:flex; align-items:center; justify-content:center;
+  font-weight:600;
+  padding:12px 14px;        /* igual para todos */
+}
+
+/* Ghost / meta */
+.btn-ghost{
+  background: rgba(8,12,28,0.35); border:1px solid var(--card-border);
+  color:var(--text); padding:8px 10px; border-radius:10px; cursor:pointer;
+}
+.btn-ghost[disabled]{ opacity:.5; cursor:not-allowed }
 
 /* Total */
 #total{
@@ -236,12 +254,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 .price{ font-weight:700; font-size:1.2rem; color:#c5f8d7; }
 .loc{ font-size:12px; color:var(--muted); }
 .actions{ display:flex; gap:8px; flex-wrap:wrap; }
-.btn-ghost{
-  background: rgba(8,12,28,0.35); border:1px solid var(--card-border);
-  color:var(--text); padding:8px 10px; border-radius:10px; cursor:pointer;
-}
-.btn-ghost[disabled]{ opacity:.5; cursor:not-allowed }
-
 .msg{
   border:1px solid var(--card-border); border-radius:14px; background: rgba(8,12,28,0.5);
   padding:10px 12px; display:flex; flex-direction:column; gap:6px;
@@ -287,7 +299,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       <div class="title">Sugestões de preço</div>
       <div id="precos"></div>
 
-      <!-- Linha 1: valor manual + grupo (Qtd + Multiplicar) -->
+      <!-- Valor manual + multiplicação -->
       <div class="row">
         <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor unitário (ex: 0.77)">
         <div class="mult-group">
@@ -296,19 +308,15 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
         </div>
       </div>
 
-      <!-- Linha 2: ações principais -->
-      <div class="row">
-        <button class="btn ok" onclick="adicionarManual()">➕ Adicionar</button>
-        <button class="btn warn" onclick="diminuirManual()">➖ Subtrair</button>
-        <button class="btn err" onclick="zerarTotal()">🧹 Zerar Total</button>
-      </div>
-
-      <!-- Linha 3: utilidades -->
-      <div class="row">
-        <button class="btn err" onclick="limparSugestoes()">❌ Apagar sugestões</button>
-        <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer último</button>
-        <button class="btn" onclick="abrirHistorico(event)">📜 Histórico</button>
-        <button class="btn" onclick="abrirFeed(event)">💬 Chat</button>
+      <!-- NOVO: Coluna única de botões (mesmo tamanho) -->
+      <div class="btn-col">
+        <button class="btn ok block"   onclick="adicionarManual()">➕ Adicionar</button>
+        <button class="btn warn block" onclick="diminuirManual()">➖ Subtrair</button>
+        <button class="btn err block"  onclick="limparSugestoes()">❌ Apagar sugestões</button>
+        <button class="btn warn block" onclick="desfazerUltimo()">↩️ Desfazer último</button>
+        <button class="btn err block"  onclick="zerarTotal()">🧹 Zerar Total</button>
+        <button class="btn block"      onclick="abrirHistorico(event)">📜 Histórico</button>
+        <button class="btn block"      onclick="abrirFeed(event)">💬 Chat</button>
       </div>
 
       <div id="total">
@@ -679,9 +687,10 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       if (dw > MAX_W) { const s = MAX_W / dw; dw = Math.max(1, Math.round(dw*s)); dh = Math.max(1, Math.round(dh*s)); }
       canvas.width = dw; canvas.height = dh;
 
-      if (ctx.filter !== undefined) ctx.filter = 'grayscale(1) contrast(115%)';
-      ctx.drawImage(video, roiX, roiY, roiWidth, roiHeight, 0, 0, dw, dh);
-      if (ctx.filter !== undefined) ctx.filter = 'none';
+      const ctx2 = canvas.getContext('2d');
+      if (ctx2.filter !== undefined) ctx2.filter = 'grayscale(1) contrast(115%)';
+      ctx2.drawImage(video, roiX, roiY, roiWidth, roiHeight, 0, 0, dw, dh);
+      if (ctx2.filter !== undefined) ctx2.filter = 'none';
 
       try {
         const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
@@ -727,7 +736,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       saveFeed();
     }
 
-    // normalização de post (métricas)
     function normalizePost(p){
       if (!p || p.type !== 'post') return p;
       if (typeof p.up !== 'number') p.up = 0;
@@ -736,14 +744,13 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       return p;
     }
 
-    // votar: um por usuário (deviceId)
-    function votar(postId, tipo){ // 'up' | 'down'
+    function votar(postId, tipo){
       const idx = feed.findIndex(it => it.type === 'post' && it.id === postId);
       if (idx === -1) return;
       const p = normalizePost(feed[idx]);
 
       const prev = p.voters[deviceId];
-      if (prev === tipo) return; // já votou igual
+      if (prev === tipo) return;
 
       if (prev === 'up' && p.up > 0) p.up--;
       if (prev === 'down' && p.down > 0) p.down--;
@@ -759,7 +766,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 
     /* ===== Scroll helpers ===== */
     function getFeedScroller(){
-      return document.getElementById('feedScroll'); // quem de fato rola
+      return document.getElementById('feedScroll');
     }
     function isNearBottom(el){
       if (!el) return true;
@@ -771,7 +778,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       requestAnimationFrame(()=>{
         scroller.scrollTop = scroller.scrollHeight;
         requestAnimationFrame(()=>{
-          scroller.scrollTop = scroller.scrollHeight; // garante após imagens
+          scroller.scrollTop = scroller.scrollHeight;
         });
       });
     }
@@ -811,8 +818,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       document.getElementById('feedModal').classList.add('show');
       feedOpen = true;
       history.pushState({feed:true}, '');
-
-      // ao abrir, cola no fim (mensagem mais recente imediatamente visível)
       jumpToBottom();
     }
 
@@ -838,7 +843,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 
       if (lista) lista.innerHTML = '';
 
-      // ORDEM ASCENDENTE: antigos → novos (novos no fundo)
       const items = [...feed].sort((a,b)=> new Date(a.ts) - new Date(b.ts));
 
       if (!items.length){
@@ -911,7 +915,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
             btnShare.onclick = ()=> sharePost(p);
             actions.appendChild(btnMap); actions.appendChild(btnShare);
 
-            // --- VOTOS ---
             const userVote = p.voters && p.voters[deviceId];
             const voteWrap = document.createElement('div');
             voteWrap.style.display = 'flex';
@@ -978,7 +981,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
     function enviarMensagem(){
       const input = document.getElementById('chatInput');
       let text = (input.value || '').trim();
-      if (!text) { input.blur(); return; } // teclado só se digitar
+      if (!text) { input.blur(); return; }
 
       const id = Date.now() + '_' + Math.random().toString(36).slice(2,7);
       const ts = new Date().toISOString();
@@ -1178,12 +1181,13 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 
     // ===== Inicialização =====
     setInterval(capturarImagemEProcessar, 1200);
-    iniciarCamera();       // tenta iniciar automaticamente
-    bindCameraAutostart(); // e também por gesto, se o browser exigir
+    iniciarCamera();
+    bindCameraAutostart();
     loadState();
   </script>
 </body>
 </html>
+
 
 
 
