@@ -36,7 +36,7 @@
 
   --shadow: 0 10px 28px rgba(6,12,32,0.40), inset 0 1px rgba(255,255,255,0.05);
 
-  /* Largura da coluna de botões à direita */
+  /* Largura do trilho dos botões à direita */
   --right-buttons-w: 150px;
 }
 
@@ -103,47 +103,11 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   color:var(--muted); padding: 6px 8px; font-size:12px; border-radius: 10px; backdrop-filter: blur(6px);
 }
 
-/* ===== Coluna direita ===== */
+/* Coluna direita */
 .title{ font-size:13px; color:var(--muted); letter-spacing:.4px; text-transform:uppercase }
-
-/* NOVO: grid para inputs + coluna de botões alinhados no topo */
-.aside-head{
-  display:grid;
-  grid-template-columns: 1fr var(--right-buttons-w);
-  grid-template-areas: "inputs buttons";
-  align-items:start;         /* topo alinhado */
-  gap:12px;
-  margin-top:8px;
-}
-@media (max-width:860px){
-  .aside-head{ grid-template-columns:1fr; grid-template-areas:"inputs" "buttons"; }
-}
-
-.aside-inputs{ grid-area: inputs; display:flex; flex-direction:column; gap:8px; }
-.right-buttons{
-  grid-area: buttons;
-  display:flex; flex-direction:column; gap:8px;
-}
-.right-buttons .btn{ width:100%; }
-
-/* Inputs */
-.row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
-.input{
-  border:1px solid var(--card-border); background: rgba(10,14,32,0.55);
-  color:var(--text); padding: 10px 12px; border-radius:12px; outline:none;
-  transition: border-color .12s ease, box-shadow .12s ease, background .12s ease;
-}
-.input:focus-visible{
-  border-color: rgba(127,180,255,0.65);
-  box-shadow: 0 0 0 3px rgba(127,180,255,0.18);
-  background: rgba(10,14,32,0.65);
-}
-#manualInput{ width: 120px; }          /* campo manual compacto */
-.input-qty{ width: 92px; text-align:center; }
-.mult-group{ display:flex; gap:8px; align-items:center; }
+#precos{ display:flex; flex-direction:column; gap:10px; max-height:48vh; overflow:auto; padding-right:4px; }
 
 /* Sugestões de preço */
-#precos{ display:flex; flex-direction:column; gap:10px; max-height:48vh; overflow:auto; padding-right:4px; }
 .preco-btn{
   font-size:1.08em; font-weight:700; padding:12px 14px;
   background: linear-gradient(180deg, rgba(26,44,32,0.95), rgba(18,33,24,0.92));
@@ -155,6 +119,46 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 .preco-btn:hover{ transform: translateY(-1px); box-shadow: 0 12px 26px rgba(7,20,12,0.45); filter: brightness(1.03); }
 .preco-btn.pulse{ transform: scale(1.04) }
 
+/* ====== NOVO BLOCO: inputs + coluna de botões ====== */
+.aside-head{
+  display:grid;
+  grid-template-columns: 1fr var(--right-buttons-w);
+  grid-template-areas: "inputs buttons";
+  align-items: start;          /* alinha topo */
+  gap: 12px;
+  margin: 8px 0 4px 0;
+}
+@media (max-width:860px){
+  .aside-head{ grid-template-columns:1fr; grid-template-areas:"inputs" "buttons"; }
+}
+.aside-inputs{ grid-area: inputs; display:flex; flex-direction:column; gap:8px; }
+.right-buttons{
+  grid-area: buttons;
+  display:flex; flex-direction:column; gap:8px;
+}
+.right-buttons .btn{
+  width:100%;
+  padding:8px 10px;      /* menor */
+  font-size:14px;        /* menor */
+  border-radius:10px;
+}
+
+/* Inputs/botões (esquerda) */
+.row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+.input{
+  border:1px solid var(--card-border); background: rgba(10,14,32,0.55);
+  color:var(--text); padding: 10px 12px; border-radius:12px; outline:none;
+  transition: border-color .12s ease, box-shadow .12s ease, background .12s ease;
+}
+.input:focus-visible{
+  border-color: rgba(127,180,255,0.65);
+  box-shadow: 0 0 0 3px rgba(127,180,255,0.18);
+  background: rgba(10,14,32,0.65);
+}
+#manualInput{ width: 120px; }     /* campo manual compacto */
+.input-qty{ width:92px; text-align:center; }
+.mult-group{ display:flex; gap:8px; align-items:center; }
+
 /* Botões base */
 .btn{
   border:1px solid var(--card-border);
@@ -163,7 +167,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   padding:10px 12px; border-radius:12px; cursor:pointer;
   transition: transform .12s ease, background .12s ease, border-color .12s ease, box-shadow .12s ease, filter .12s ease;
   box-shadow: 0 6px 16px rgba(6,12,32,0.25);
-  font-weight:600;
 }
 .btn:hover{ transform: translateY(-1px); filter: brightness(1.03); }
 .btn:active{ transform: translateY(0); filter: brightness(0.98); }
@@ -293,16 +296,15 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       <div class="tip">A leitura ocorre automaticamente ~a cada 1,2s. Use a câmera traseira e mantenha a etiqueta bem enquadrada. Toque na área da câmera se ela não iniciar automaticamente.</div>
     </section>
 
-    <!-- Direita: inputs + botões (coluna) + sugestões + total -->
+    <!-- Direita: sugestões + controles + total -->
     <aside class="card stack">
       <div class="title">Sugestões de preço</div>
-      <!-- Bloco que alinha inputs à esquerda e 7 botões à direita -->
+
+      <!-- NOVO bloco: inputs à esquerda + 7 botões em coluna à direita -->
       <div class="aside-head">
         <div class="aside-inputs">
-          <!-- Linha 1: valor manual + grupo (Qtd + Multiplicar) -->
           <div class="row">
-            <input id="manualInput" class="input" type="number" step="0.01" inputmode="decimal"
-                   placeholder="Valor unitário (ex: 0.77)">
+            <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor unitário (ex: 0.77)">
             <div class="mult-group">
               <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
               <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
@@ -310,11 +312,11 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
           </div>
         </div>
 
-        <!-- TODOS os 7 botões, um embaixo do outro -->
+        <!-- 7 botões, um embaixo do outro, alinhados ao topo do campo manual -->
         <div class="right-buttons">
           <button class="btn ok"   onclick="adicionarManual()">➕ Adicionar</button>
           <button class="btn warn" onclick="diminuirManual()">➖ Subtrair</button>
-          <button class="btn err"  onclick="limparSugestoes()">❌ Apagar</button>
+          <button class="btn err"  onclick="limparSugestoes()">❌ Apagar sugestões</button>
           <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer último</button>
           <button class="btn err"  onclick="zerarTotal()">🧹 Zerar Total</button>
           <button class="btn"      onclick="abrirHistorico(event)">📜 Histórico</button>
@@ -923,9 +925,11 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
             else { btnMap.disabled = true; }
             const btnShare = document.createElement('button'); btnShare.className='btn-ghost'; btnShare.textContent='🔗 Compartilhar';
             btnShare.onclick = ()=> sharePost(p);
-            actions.appendChild(btnMap); actions.appendChild(btnShare);
 
-            // --- Votos (deixei igual ao seu fluxo) ---
+            actions.appendChild(btnMap);
+            actions.appendChild(btnShare);
+
+            // --- VOTOS ---
             const userVote = p.voters && p.voters[deviceId];
             const voteWrap = document.createElement('div');
             voteWrap.style.display = 'flex';
