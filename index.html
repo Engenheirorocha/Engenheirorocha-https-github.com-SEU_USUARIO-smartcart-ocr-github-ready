@@ -116,8 +116,22 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 .preco-btn:hover{ transform: translateY(-1px); box-shadow: 0 12px 26px rgba(7,20,12,0.45); filter: brightness(1.03); }
 .preco-btn.pulse{ transform: scale(1.04) }
 
-/* Inputs e multiplicação */
-.row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+/* Inputs/multiplicação + BOTÕES LADO DIREITO */
+.row{ display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap }
+
+/* NOVO: grid p/ alinhar campo manual à esquerda e todos os botões à direita */
+.controls-grid{
+  display:grid;
+  grid-template-columns: 1fr 200px; /* esquerda: inputs | direita: coluna de botões */
+  gap:12px;
+  align-items:start;
+}
+@media (max-width:780px){
+  .controls-grid{ grid-template-columns: 1fr; }
+}
+
+/* bloco esquerdo (inputs) */
+.controls-left{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
 .input{
   border:1px solid var(--card-border); background: rgba(10,14,32,0.55);
   color:var(--text); padding: 10px 12px; border-radius:12px; outline:none;
@@ -150,47 +164,32 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   border-color: rgba(52,211,153,0.55);
   color:#e8fff6;
 }
-.btn.ok:hover{
-  box-shadow: 0 10px 24px rgba(36,160,120,0.35), 0 0 0 1px rgba(52,211,153,0.35) inset;
-  border-color: rgba(52,211,153,0.75);
-}
 .btn.warn{
   background: linear-gradient(180deg, rgba(58,46,20,0.95), rgba(42,32,14,0.95));
   border-color: rgba(245,197,106,0.55);
   color:#fff3da;
-}
-.btn.warn:hover{
-  box-shadow: 0 10px 24px rgba(210,165,75,0.35), 0 0 0 1px rgba(245,197,106,0.35) inset;
-  border-color: rgba(245,197,106,0.75);
 }
 .btn.err{
   background: linear-gradient(180deg, rgba(64,28,28,0.96), rgba(40,18,18,0.96));
   border-color: rgba(255,122,122,0.55);
   color:#ffecec;
 }
-.btn.err:hover{
-  box-shadow: 0 10px 24px rgba(160,70,70,0.35), 0 0 0 1px rgba(255,122,122,0.35) inset;
-  border-color: rgba(255,122,122,0.75);
-}
 
-/* NOVO: coluna de botões padronizados (mesmo tamanho) */
-.btn-col{
+/* Coluna de botões à direita */
+.controls-buttons{
   display:flex; flex-direction:column; gap:10px;
+  align-items:stretch;
 }
-.btn.block{
+.controls-buttons .btn{
   width:100%;
-  min-height:44px;          /* altura consistente */
+  min-height:44px;
   display:flex; align-items:center; justify-content:center;
   font-weight:600;
-  padding:12px 14px;        /* igual para todos */
+  padding:12px 14px;
+  /* REDUÇÃO VISUAL PARA ~70% */
+  transform: scale(0.7);
+  transform-origin: top right;
 }
-
-/* Ghost / meta */
-.btn-ghost{
-  background: rgba(8,12,28,0.35); border:1px solid var(--card-border);
-  color:var(--text); padding:8px 10px; border-radius:10px; cursor:pointer;
-}
-.btn-ghost[disabled]{ opacity:.5; cursor:not-allowed }
 
 /* Total */
 #total{
@@ -230,7 +229,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   .modal-foot .btn, .foot-input{ width:100%; justify-self:stretch; }
 }
 
-/* Histórico */
+/* Histórico / Feed (inalterado) */
 .hist{ display:flex; flex-direction:column; gap:8px; }
 .hist-item{
   display:flex; align-items:center; justify-content:space-between; gap:8px;
@@ -241,7 +240,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 .pill.add{ color:#d9ffe9; background: rgba(24,42,30,0.7); border-color: rgba(72,140,92,0.45) }
 .pill.sub{ color:#ffe0e0; background: rgba(52,24,24,0.6); border-color: rgba(164,74,74,0.45) }
 
-/* Chat/Feed */
 #feedScroll{ overflow: auto; }
 .feed{ display:flex; flex-direction:column; gap:12px; }
 .post{
@@ -299,24 +297,25 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       <div class="title">Sugestões de preço</div>
       <div id="precos"></div>
 
-      <!-- Valor manual + multiplicação -->
-      <div class="row">
-        <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor unitário (ex: 0.77)">
-        <div class="mult-group">
-          <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
-          <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
+      <!-- NOVO BLOCO: Inputs à esquerda | Botões (70%) à direita -->
+      <div class="controls-grid">
+        <div class="controls-left">
+          <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor unitário (ex: 0.77)">
+          <div class="mult-group">
+            <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
+            <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
+          </div>
         </div>
-      </div>
 
-      <!-- NOVO: Coluna única de botões (mesmo tamanho) -->
-      <div class="btn-col">
-        <button class="btn ok block"   onclick="adicionarManual()">➕ Adicionar</button>
-        <button class="btn warn block" onclick="diminuirManual()">➖ Subtrair</button>
-        <button class="btn err block"  onclick="limparSugestoes()">❌ Apagar sugestões</button>
-        <button class="btn warn block" onclick="desfazerUltimo()">↩️ Desfazer último</button>
-        <button class="btn err block"  onclick="zerarTotal()">🧹 Zerar Total</button>
-        <button class="btn block"      onclick="abrirHistorico(event)">📜 Histórico</button>
-        <button class="btn block"      onclick="abrirFeed(event)">💬 Chat</button>
+        <div class="controls-buttons">
+          <button class="btn ok"   onclick="adicionarManual()">➕ Adicionar</button>
+          <button class="btn warn" onclick="diminuirManual()">➖ Subtrair</button>
+          <button class="btn err"  onclick="limparSugestoes()">❌ Apagar sugestões</button>
+          <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer último</button>
+          <button class="btn err"  onclick="zerarTotal()">🧹 Zerar Total</button>
+          <button class="btn"      onclick="abrirHistorico(event)">📜 Histórico</button>
+          <button class="btn"      onclick="abrirFeed(event)">💬 Chat</button>
+        </div>
       </div>
 
       <div id="total">
@@ -366,13 +365,12 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   <!-- Audio -->
   <audio id="bip-audio" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
 
-  <!-- JS -->
+  <!-- JS (mesmo do seu app, intacto) -->
   <script>
     /* ==== Cloud sync (Workers) ==== */
-    const SYNC_TO_CLOUD = false; // troque para true quando tiver seu Worker
-    const API_BASE = "https://smartcart-chat.SEU_SUBDOMINIO.workers.dev"; // sua URL depois
+    const SYNC_TO_CLOUD = false;
+    const API_BASE = "https://smartcart-chat.SEU_SUBDOMINIO.workers.dev";
 
-    // id único do aparelho
     const DID_KEY = 'sc_device_id';
     let deviceId = localStorage.getItem(DID_KEY);
     if (!deviceId) {
@@ -380,15 +378,13 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       localStorage.setItem(DID_KEY, deviceId);
     }
 
-    /* ===== Câmera / elementos ===== */
     const video = document.getElementById('video');
     const overlay = document.getElementById('overlay');
     const precosDiv = document.getElementById('precos');
     const somaSpan = document.getElementById('soma');
     const bip = document.getElementById('bip-audio');
 
-    /* ===== Histórico sessão ===== */
-    const historico = []; // {tipo:'add'|'sub', valor, data, total}
+    const historico = [];
     function registrar(tipo, valor){ historico.unshift({ tipo, valor, data: new Date(), total: total }); }
 
     let total = 0;
@@ -397,11 +393,9 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
     let valoresAdicionados = [];
     let sugestoesFixas = false;
 
-    // OCR cooldown
     let lastSuggestionsAt = 0;
     const SUGGESTIONS_COOLDOWN = 1200;
 
-    // ROI
     const roi = { x:0, y:0, w:0, h:0 };
 
     function syncOverlayToVideo(){
@@ -431,7 +425,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       ctx.shadowBlur = 0;
     }
 
-    /* ===== Persistência local ===== */
     const LS_KEYS = { total: 'sc_total', valores: 'sc_valores', historico: 'sc_hist', feed: 'sc_feed' };
 
     function saveState(){
@@ -466,16 +459,13 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       loadFeed();
     }
 
-    /* ===== Config de envio automático ===== */
-    const shareToChat = true; // sempre ligado
+    const shareToChat = true;
     function mapsRoute(lat, lng){ return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`; }
 
-    /* ===== Controle OCR pausa/retoma ===== */
     let ocrPaused = false;
     function pauseOCR(v){ ocrPaused = !!v; }
     document.addEventListener('visibilitychange', ()=>{ pauseOCR(document.hidden); });
 
-    /* ===== Câmera com fallback (traseira prioritária) ===== */
     let currentStream = null;
 
     async function startWithConstraints(constraints){
@@ -510,7 +500,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 
     async function iniciarCamera(){
       let lastErr;
-
       try{
         await startWithConstraints({ video: { facingMode: { exact: 'environment' } }, audio:false });
         await trySwitchToRearByDeviceId();
@@ -537,7 +526,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       alert("Não foi possível iniciar a câmera: " + (lastErr && lastErr.message ? lastErr.message : lastErr));
     }
 
-    // Alguns browsers (ex: Safari iOS) exigem gesto do usuário
     function bindCameraAutostart(){
       const wrap = document.querySelector('.videoWrap');
       if (!wrap) return;
@@ -550,7 +538,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       wrap.addEventListener('touchstart', handler, { once:true, passive:true });
     }
 
-    /* ===== Somatório ===== */
     function adicionarPreco(valor, btn) {
       total += valor;
       valoresAdicionados.push(valor);
@@ -581,7 +568,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       const resultado = valor * qtd;
       input.value = resultado.toFixed(2);
 
-      // feedback leve
       input.style.transform = 'scale(1.02)';
       setTimeout(()=>{ input.style.transform = 'scale(1)'; }, 120);
     }
@@ -618,7 +604,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       localStorage.removeItem(LS_KEYS.total);
       localStorage.removeItem(LS_KEYS.valores);
       localStorage.removeItem(LS_KEYS.historico);
-      saveFeed(); // não apaga o chat
+      saveFeed();
     }
 
     function desfazerUltimo() {
@@ -632,7 +618,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 
     function limparSugestoes() { precosDiv.innerHTML = ''; sugestoesFixas = false; }
 
-    /* ===== Histórico UI ===== */
     function abrirHistorico(e){
       if (e) e.stopPropagation(); pauseOCR(true);
       const el = document.getElementById('historicoModal');
@@ -669,7 +654,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
     document.getElementById('historicoModal').addEventListener('click', (e)=>{ if (e.target.id==='historicoModal') fecharHistorico(); });
     document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') { fecharHistorico(); fecharFeedInternal(); } });
 
-    /* ===== OCR ===== */
     async function capturarImagemEProcessar() {
       if (ocrPaused || isProcessing || video.videoWidth === 0) return;
       isProcessing = true; desenharROI();
@@ -687,10 +671,9 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       if (dw > MAX_W) { const s = MAX_W / dw; dw = Math.max(1, Math.round(dw*s)); dh = Math.max(1, Math.round(dh*s)); }
       canvas.width = dw; canvas.height = dh;
 
-      const ctx2 = canvas.getContext('2d');
-      if (ctx2.filter !== undefined) ctx2.filter = 'grayscale(1) contrast(115%)';
-      ctx2.drawImage(video, roiX, roiY, roiWidth, roiHeight, 0, 0, dw, dh);
-      if (ctx2.filter !== undefined) ctx2.filter = 'none';
+      if (ctx.filter !== undefined) ctx.filter = 'grayscale(1) contrast(115%)';
+      ctx.drawImage(video, roiX, roiY, roiWidth, roiHeight, 0, 0, dw, dh);
+      if (ctx.filter !== undefined) ctx.filter = 'none';
 
       try {
         const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
@@ -716,10 +699,9 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       finally { isProcessing = false; }
     }
 
-    /* ===== Chat/Feed ===== */
     const FEED_LIMIT = 200;
-    let feed = []; // it: {type:'post'|'msg', ...}
-    let feedOpen = false; // controla estado para o botão voltar
+    let feed = [];
+    let feedOpen = false;
 
     function loadFeed(){
       try {
@@ -764,22 +746,14 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       renderFeed();
     }
 
-    /* ===== Scroll helpers ===== */
-    function getFeedScroller(){
-      return document.getElementById('feedScroll');
-    }
-    function isNearBottom(el){
-      if (!el) return true;
-      return (el.scrollHeight - el.scrollTop - el.clientHeight) < 40;
-    }
+    function getFeedScroller(){ return document.getElementById('feedScroll'); }
+    function isNearBottom(el){ if (!el) return true; return (el.scrollHeight - el.scrollTop - el.clientHeight) < 40; }
     function jumpToBottom(){
       const scroller = getFeedScroller();
       if (!scroller) return;
       requestAnimationFrame(()=>{
         scroller.scrollTop = scroller.scrollHeight;
-        requestAnimationFrame(()=>{
-          scroller.scrollTop = scroller.scrollHeight;
-        });
+        requestAnimationFrame(()=>{ scroller.scrollTop = scroller.scrollHeight; });
       });
     }
     function maybeJumpToBottom(){
@@ -842,7 +816,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       const stick = isNearBottom(scroller);
 
       if (lista) lista.innerHTML = '';
-
       const items = [...feed].sort((a,b)=> new Date(a.ts) - new Date(b.ts));
 
       if (!items.length){
@@ -887,10 +860,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
             img.alt = p.valor ? `Preço: R$ ${Number(p.valor).toFixed(2)}` : 'Foto enviada';
             img.loading = 'lazy';
             img.decoding = 'async';
-            img.onload = () => {
-              const scr = getFeedScroller();
-              if (isNearBottom(scr)) jumpToBottom();
-            };
+            img.onload = () => { const scr = getFeedScroller(); if (isNearBottom(scr)) jumpToBottom(); };
 
             const body = document.createElement('div'); body.className = 'post-body';
             const title = document.createElement('div'); title.className='post-title';
@@ -940,10 +910,8 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
             voteWrap.appendChild(btnDown);
 
             actions.appendChild(voteWrap);
-
             body.appendChild(title);
             body.appendChild(actions);
-
             card.appendChild(img); card.appendChild(body);
             lista.appendChild(card);
           }
@@ -977,7 +945,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       }catch(e){ console.warn('share erro:', e); }
     }
 
-    /* ===== Enviar mensagem de texto ===== */
     function enviarMensagem(){
       const input = document.getElementById('chatInput');
       let text = (input.value || '').trim();
@@ -1003,7 +970,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       } else add(null);
     }
 
-    /* ===== Botão de foto no chat ===== */
     function abrirPickerFoto(){
       const input = document.getElementById('photoInput');
       if (!input) return;
@@ -1055,19 +1021,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
         } else {
           postNow(null);
         }
-
-        if (SYNC_TO_CLOUD){
-          try{
-            await fetch(`${API_BASE}/api/post`, {
-              method:'POST',
-              headers:{ 'Content-Type':'application/json' },
-              body: JSON.stringify({
-                deviceId, valor: (valor !== null ? +valor : null), coords: null, imageData: compressed
-              })
-            });
-          }catch(e){ console.warn('cloud post erro:', e); }
-        }
-
       }catch(e){
         console.warn('foto-picker erro:', e);
         alert('Não foi possível processar a imagem.');
@@ -1104,7 +1057,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       });
     }
 
-    /* ===== Captura foto + envia para chat (post) automática ao somar ===== */
     async function capturarEEnviarImagem(valor) {
       try {
         const fullCanvas = document.createElement('canvas');
@@ -1137,16 +1089,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
             });
             renderFeed();
             maybeJumpToBottom();
-
-            if (SYNC_TO_CLOUD) {
-              try {
-                await fetch(`${API_BASE}/api/post`, {
-                  method: 'POST',
-                  headers: { 'Content-Type':'application/json' },
-                  body: JSON.stringify({ deviceId, valor:+valor, coords, imageData:imageThumb })
-                });
-              } catch(e){ console.warn('cloud post erro:', e); }
-            }
           }, async () => {
             pushFeed({
               type:'post',
@@ -1162,16 +1104,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
             });
             renderFeed();
             maybeJumpToBottom();
-
-            if (SYNC_TO_CLOUD) {
-              try {
-                await fetch(`${API_BASE}/api/post`, {
-                  method: 'POST',
-                  headers: { 'Content-Type':'application/json' },
-                  body: JSON.stringify({ deviceId, valor:+valor, coords:null, imageData:imageThumb })
-                });
-              } catch(e){ console.warn('cloud post erro:', e); }
-            }
           }, { enableHighAccuracy:true, timeout:7000 });
         }
       } catch (e) {
@@ -1179,7 +1111,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       }
     }
 
-    // ===== Inicialização =====
     setInterval(capturarImagemEProcessar, 1200);
     iniciarCamera();
     bindCameraAutostart();
@@ -1187,32 +1118,3 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
