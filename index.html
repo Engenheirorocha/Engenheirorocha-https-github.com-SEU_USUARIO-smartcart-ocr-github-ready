@@ -251,10 +251,940 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   </style>
 </head>
 <body>
-  <!-- TODO: aqui mantém exatamente o mesmo HTML e JS que você já tem -->
-  <!-- Basta colar o CSS novo e manter sua estrutura -->
+  <!-- Header -->
+  <header>
+    <div class="wrap">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Carrinho de compras">
+            <circle cx="9" cy="21" r="1"></circle>
+            <circle cx="20" cy="21" r="1"></circle>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h7.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+          </svg>
+        </div>
+        <h1>Smart Cart</h1>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main>
+    <!-- Esquerda: câmera + HUD -->
+    <section class="card stack">
+      <div class="videoWrap" title="Toque para iniciar a câmera se necessário">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="overlay"></canvas>
+        <div class="hud">
+          <span class="tag">Mire a etiqueta dentro do retângulo (50% × 20%)</span>
+        </div>
+      </div>
+      <div class="tip">A leitura ocorre automaticamente ~a cada 1,2s. Use a câmera traseira e mantenha a etiqueta bem enquadrada. Toque na área da câmera se ela não iniciar automaticamente.</div>
+    </section>
+
+    <!-- Direita: sugestões + controles + total -->
+    <aside class="card stack">
+      <div class="title">Sugestões de preço</div>
+      <div id="precos"></div>
+
+      <!-- Linha 1: valor manual + grupo (Qtd + Multiplicar) -->
+      <div class="row">
+        <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor unitário (ex: 0.77)">
+        <div class="mult-group">
+          <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
+          <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
+        </div>
+      </div>
+
+      <!-- Linha 2: ações principais -->
+      <div class="row">
+        <button class="btn ok" onclick="adicionarManual()">➕ Adicionar</button>
+        <button class="btn warn" onclick="diminuirManual()">➖ Subtrair</button>
+        <button class="btn err" onclick="zerarTotal()">🧹 Zerar Total</button>
+      </div>
+
+      <!-- Linha 3: utilidades -->
+      <div class="row">
+        <button class="btn err" onclick="limparSugestoes()">❌ Apagar sugestões</button>
+        <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer último</button>
+        <button class="btn" onclick="abrirHistorico(event)">📜 Histórico</button>
+        <button class="btn" onclick="abrirFeed(event)">💬 Chat</button>
+      </div>
+
+      <div id="total">
+        <span>Total</span>
+        <span>R$ <span id="soma">0.00</span></span>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Modal Histórico -->
+  <div id="historicoModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="histTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="modal-title" id="histTitle">Histórico de lançamentos</div>
+        <div style="display:flex; gap:8px">
+          <button class="btn" onclick="fecharHistorico()">✖ Fechar</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div id="historicoLista" class="hist"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Chat/Feed -->
+  <div id="feedModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="feedTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="modal-title" id="feedTitle"><!-- título removido --></div>
+        <div style="display:flex; gap:8px">
+          <button class="btn" onclick="fecharFeed()">✖ Fechar</button>
+        </div>
+      </div>
+      <div class="modal-body" id="feedScroll">
+        <div id="feedLista" class="feed"></div>
+      </div>
+      <div class="modal-foot">
+        <input id="chatInput" class="input foot-input" type="text" placeholder="Escreva uma mensagem..." />
+        <button class="btn" onclick="abrirPickerFoto()">📷 Foto</button>
+        <button class="btn ok" onclick="enviarMensagem()">📨 Enviar</button>
+        <!-- input de arquivo escondido -->
+        <input id="photoInput" type="file" accept="image/*" capture="environment" style="display:none" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio -->
+  <audio id="bip-audio" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+
+  <!-- JS -->
+  <script>
+    /* ==== Cloud sync (Workers) ==== */
+    const SYNC_TO_CLOUD = false; // troque para true quando tiver seu Worker
+    const API_BASE = "https://smartcart-chat.SEU_SUBDOMINIO.workers.dev"; // sua URL depois
+
+    // id único do aparelho
+    const DID_KEY = 'sc_device_id';
+    let deviceId = localStorage.getItem(DID_KEY);
+    if (!deviceId) {
+      deviceId = Date.now() + '_' + Math.random().toString(36).slice(2,10);
+      localStorage.setItem(DID_KEY, deviceId);
+    }
+
+    /* ===== Câmera / elementos ===== */
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+    const precosDiv = document.getElementById('precos');
+    const somaSpan = document.getElementById('soma');
+    const bip = document.getElementById('bip-audio');
+
+    /* ===== Histórico sessão ===== */
+    const historico = []; // {tipo:'add'|'sub', valor, data, total}
+    function registrar(tipo, valor){ historico.unshift({ tipo, valor, data: new Date(), total: total }); }
+
+    let total = 0;
+    let canvas = document.createElement('canvas');
+    let isProcessing = false;
+    let valoresAdicionados = [];
+    let sugestoesFixas = false;
+
+    // OCR cooldown
+    let lastSuggestionsAt = 0;
+    const SUGGESTIONS_COOLDOWN = 1200;
+
+    // ROI
+    const roi = { x:0, y:0, w:0, h:0 };
+
+    function syncOverlayToVideo(){
+      const rect = video.getBoundingClientRect();
+      const dpr  = window.devicePixelRatio || 1;
+      overlay.style.width  = rect.width + 'px';
+      overlay.style.height = rect.height + 'px';
+      overlay.width  = Math.round(rect.width  * dpr);
+      overlay.height = Math.round(rect.height * dpr);
+    }
+
+    function desenharROI() {
+      syncOverlayToVideo();
+      const ctx = overlay.getContext('2d');
+      ctx.clearRect(0, 0, overlay.width, overlay.height);
+      const w = overlay.width  * 0.5;
+      const h = overlay.height * 0.2;
+      const x = (overlay.width  - w) / 2;
+      const y = (overlay.height - h) / 2;
+      roi.x = x; roi.y = y; roi.w = w; roi.h = h;
+      const dpr = window.devicePixelRatio || 1;
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+      ctx.lineWidth = 3 * dpr;
+      ctx.shadowColor = 'rgba(110,168,254,0.65)';
+      ctx.shadowBlur = 8 * dpr;
+      ctx.strokeRect(x, y, w, h);
+      ctx.shadowBlur = 0;
+    }
+
+    /* ===== Persistência local ===== */
+    const LS_KEYS = { total: 'sc_total', valores: 'sc_valores', historico: 'sc_hist', feed: 'sc_feed' };
+
+    function saveState(){
+      localStorage.setItem(LS_KEYS.total, String(total));
+      localStorage.setItem(LS_KEYS.valores, JSON.stringify(valoresAdicionados));
+      const histJSON = historico.map(h => ({...h, data: h.data instanceof Date ? h.data.toISOString() : h.data}));
+      localStorage.setItem(LS_KEYS.historico, JSON.stringify(histJSON));
+      saveFeed();
+    }
+
+    function loadState(){
+      const t = parseFloat(localStorage.getItem(LS_KEYS.total));
+      total = Number.isFinite(t) && t >= 0 ? t : 0;
+
+      try {
+        const vals = JSON.parse(localStorage.getItem(LS_KEYS.valores) || '[]');
+        valoresAdicionados = Array.isArray(vals) ? vals.filter(v => typeof v === 'number') : [];
+      } catch { valoresAdicionados = []; }
+
+      try {
+        const hist = JSON.parse(localStorage.getItem(LS_KEYS.historico) || '[]');
+        historico.length = 0;
+        hist.forEach(h => historico.push({
+          tipo: h.tipo === 'sub' ? 'sub' : 'add',
+          valor: Number(h.valor) || 0,
+          data: h.data ? new Date(h.data) : new Date(),
+          total: Number(h.total) || 0
+        }));
+      } catch {}
+
+      somaSpan.innerText = total.toFixed(2);
+      loadFeed();
+    }
+
+    /* ===== Config de envio automático ===== */
+    const shareToChat = true; // sempre ligado
+    function mapsRoute(lat, lng){ return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`; }
+
+    /* ===== Controle OCR pausa/retoma ===== */
+    let ocrPaused = false;
+    function pauseOCR(v){ ocrPaused = !!v; }
+    document.addEventListener('visibilitychange', ()=>{ pauseOCR(document.hidden); });
+
+    /* ===== Câmera com fallback (traseira prioritária) ===== */
+    let currentStream = null;
+
+    async function startWithConstraints(constraints){
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      if (currentStream){ currentStream.getTracks().forEach(t => t.stop()); }
+      currentStream = stream;
+      video.srcObject = stream;
+      video.onloadedmetadata = () => { syncOverlayToVideo(); desenharROI(); };
+      window.addEventListener('resize', syncOverlayToVideo);
+      window.addEventListener('orientationchange', syncOverlayToVideo);
+      return stream;
+    }
+
+    function looksLikeBackLabel(label){
+      return /back|trás|traseira|rear|environment|wide|ultra/i.test(label || '');
+    }
+
+    async function trySwitchToRearByDeviceId(){
+      try{
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videos = devices.filter(d => d.kind === 'videoinput');
+        let candidate = videos.find(d => looksLikeBackLabel(d.label));
+        if (!candidate && videos.length) candidate = videos[videos.length - 1];
+        if (candidate){
+          const track = currentStream && currentStream.getVideoTracks()[0];
+          const settings = track ? track.getSettings() : {};
+          if (settings && settings.deviceId === candidate.deviceId) return;
+          await startWithConstraints({ video: { deviceId: { exact: candidate.deviceId } }, audio:false });
+        }
+      }catch(e){ /* ignora troca se falhar */ }
+    }
+
+    async function iniciarCamera(){
+      let lastErr;
+
+      try{
+        await startWithConstraints({ video: { facingMode: { exact: 'environment' } }, audio:false });
+        await trySwitchToRearByDeviceId();
+        return;
+      }catch(e){ lastErr = e; }
+
+      try{
+        await startWithConstraints({ video: { facingMode: { ideal: 'environment' } }, audio:false });
+        await trySwitchToRearByDeviceId();
+        return;
+      }catch(e){ lastErr = e; }
+
+      try{
+        await startWithConstraints({ video: true, audio:false });
+        await trySwitchToRearByDeviceId();
+        return;
+      }catch(e){ lastErr = e; }
+
+      try{
+        await startWithConstraints({ video: true, audio:false });
+        return;
+      }catch(e){ lastErr = e; }
+
+      alert("Não foi possível iniciar a câmera: " + (lastErr && lastErr.message ? lastErr.message : lastErr));
+    }
+
+    // Alguns browsers (ex: Safari iOS) exigem gesto do usuário
+    function bindCameraAutostart(){
+      const wrap = document.querySelector('.videoWrap');
+      if (!wrap) return;
+      const handler = () => {
+        if (!video.srcObject) iniciarCamera();
+        wrap.removeEventListener('click', handler);
+        wrap.removeEventListener('touchstart', handler);
+      };
+      wrap.addEventListener('click', handler, { once:true });
+      wrap.addEventListener('touchstart', handler, { once:true, passive:true });
+    }
+
+    /* ===== Somatório ===== */
+    function adicionarPreco(valor, btn) {
+      total += valor;
+      valoresAdicionados.push(valor);
+      somaSpan.innerText = total.toFixed(2);
+      limparSugestoes(); sugestoesFixas = false; bip.play();
+      if (btn) { btn.classList.add('pulse'); setTimeout(()=>btn.classList.remove('pulse'), 300); }
+      registrar('add', valor);
+      saveState();
+      capturarEEnviarImagem(valor);
+    }
+
+    function multiplicarManual(){
+      const input = document.getElementById('manualInput');
+      const qtyEl = document.getElementById('qtyInput');
+      let valor = parseFloat((input.value || '').replace(',', '.'));
+      let qtd = parseInt(qtyEl.value, 10);
+
+      if (isNaN(valor) || valor <= 0){
+        alert('Digite primeiro um valor unitário válido.');
+        input.focus();
+        return;
+      }
+      if (!Number.isInteger(qtd) || qtd < 1){
+        alert('Quantidade inválida. Use um número inteiro ≥ 1.');
+        qtyEl.focus();
+        return;
+      }
+      const resultado = valor * qtd;
+      input.value = resultado.toFixed(2);
+
+      // feedback leve
+      input.style.transform = 'scale(1.02)';
+      setTimeout(()=>{ input.style.transform = 'scale(1)'; }, 120);
+    }
+
+    function adicionarManual() {
+      const input = document.getElementById('manualInput');
+      const valor = parseFloat((input.value || '').replace(',', '.'));
+      if (isNaN(valor) || valor <= 0) { alert("Digite um valor válido."); input.value=''; input.focus(); return; }
+      total += valor; valoresAdicionados.push(valor);
+      somaSpan.innerText = total.toFixed(2);
+      limparSugestoes(); sugestoesFixas = false; bip.play();
+      registrar('add', valor);
+      saveState();
+      input.value=''; input.blur();
+    }
+
+    function diminuirManual() {
+      const input = document.getElementById('manualInput');
+      const valor = parseFloat((input.value || '').replace(',', '.'));
+      if (isNaN(valor) || valor <= 0) { alert("Digite um valor válido."); input.value=''; input.focus(); return; }
+      total -= valor; if (total < 0) total = 0;
+      valoresAdicionados.push(-valor);
+      somaSpan.innerText = total.toFixed(2);
+      limparSugestoes(); sugestoesFixas = false; bip.play();
+      registrar('sub', valor);
+      saveState();
+      input.value=''; input.blur();
+    }
+
+    function zerarTotal() {
+      total = 0; valoresAdicionados = [];
+      somaSpan.innerText = total.toFixed(2); bip.play();
+      historico.length = 0;
+      localStorage.removeItem(LS_KEYS.total);
+      localStorage.removeItem(LS_KEYS.valores);
+      localStorage.removeItem(LS_KEYS.historico);
+      saveFeed(); // não apaga o chat
+    }
+
+    function desfazerUltimo() {
+      if (valoresAdicionados.length > 0) {
+        const valor = valoresAdicionados.pop();
+        total -= valor; if (total < 0) total = 0;
+        somaSpan.innerText = total.toFixed(2);
+        saveState();
+      }
+    }
+
+    function limparSugestoes() { precosDiv.innerHTML = ''; sugestoesFixas = false; }
+
+    /* ===== Histórico UI ===== */
+    function abrirHistorico(e){
+      if (e) e.stopPropagation(); pauseOCR(true);
+      const el = document.getElementById('historicoModal');
+      const lista = document.getElementById('historicoLista');
+      lista.innerHTML = '';
+      if (historico.length === 0){
+        const vazio = document.createElement('div');
+        vazio.className = 'hist-item';
+        vazio.innerHTML = '<span class="hist-val">Nenhum lançamento ainda</span><span class="hist-time">—</span>';
+        lista.appendChild(vazio);
+      } else {
+        historico.forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'hist-item';
+          const tipoPill = `<span class="pill ${item.tipo === 'add' ? 'add' : 'sub'}">${item.tipo === 'add' ? 'Adicionar' : 'Diminuir'}</span>`;
+          const valorFmt = (item.tipo === 'add' ? '+' : '-') + ' R$ ' + item.valor.toFixed(2);
+          const dateFmt = item.data instanceof Date ? item.data.toLocaleString('pt-BR') : new Date(item.data).toLocaleString('pt-BR');
+          row.innerHTML = `
+            <div class="hist-left">
+              ${tipoPill}
+              <span class="hist-val">${valorFmt}</span>
+            </div>
+            <div class="hist-right">
+              <div class="hist-time">${dateFmt}</div>
+              <div class="hist-time">Total após: R$ ${item.total.toFixed(2)}</div>
+            </div>
+          `;
+          lista.appendChild(row);
+        });
+      }
+      el.classList.add('show');
+    }
+    function fecharHistorico(){ document.getElementById('historicoModal').classList.remove('show'); pauseOCR(false); }
+    document.getElementById('historicoModal').addEventListener('click', (e)=>{ if (e.target.id==='historicoModal') fecharHistorico(); });
+    document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') { fecharHistorico(); fecharFeedInternal(); } });
+
+    /* ===== OCR ===== */
+    async function capturarImagemEProcessar() {
+      if (ocrPaused || isProcessing || video.videoWidth === 0) return;
+      isProcessing = true; desenharROI();
+      const ctx = canvas.getContext('2d');
+
+      const scaleX = video.videoWidth  / overlay.width;
+      const scaleY = video.videoHeight / overlay.height;
+      const roiWidth  = Math.round(roi.w * scaleX);
+      const roiHeight = Math.round(roi.h * scaleY);
+      const roiX      = Math.round(roi.x * scaleX);
+      const roiY      = Math.round(roi.y * scaleY);
+
+      const MAX_W = 600;
+      let dw = roiWidth, dh = roiHeight;
+      if (dw > MAX_W) { const s = MAX_W / dw; dw = Math.max(1, Math.round(dw*s)); dh = Math.max(1, Math.round(dh*s)); }
+      canvas.width = dw; canvas.height = dh;
+
+      if (ctx.filter !== undefined) ctx.filter = 'grayscale(1) contrast(115%)';
+      ctx.drawImage(video, roiX, roiY, roiWidth, roiHeight, 0, 0, dw, dh);
+      if (ctx.filter !== undefined) ctx.filter = 'none';
+
+      try {
+        const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
+        const matches = text.match(/\d{1,3}(?:[.,]\d{2})/g);
+        if (matches) {
+          const now = Date.now();
+          if (now - lastSuggestionsAt >= SUGGESTIONS_COOLDOWN) {
+            lastSuggestionsAt = now;
+            limparSugestoes();
+            matches.slice(0, 3).forEach(str => {
+              const valor = parseFloat(str.replace(',', '.'));
+              if (!isNaN(valor) && valor > 0) {
+                const btn = document.createElement('div');
+                btn.className = 'preco-btn';
+                btn.innerText = `R$ ${valor.toFixed(2)}`;
+                btn.onclick = () => adicionarPreco(valor, btn);
+                precosDiv.appendChild(btn);
+              }
+            });
+          }
+        }
+      } catch (e) { console.warn('OCR erro:', e); }
+      finally { isProcessing = false; }
+    }
+
+    /* ===== Chat/Feed ===== */
+    const FEED_LIMIT = 200;
+    let feed = []; // it: {type:'post'|'msg', ...}
+    let feedOpen = false; // controla estado para o botão voltar
+
+    function loadFeed(){
+      try {
+        const f = JSON.parse(localStorage.getItem(LS_KEYS.feed) || '[]');
+        if (Array.isArray(f)) feed = f;
+      } catch { feed = []; }
+    }
+    function saveFeed(){
+      localStorage.setItem(LS_KEYS.feed, JSON.stringify(feed));
+    }
+    function pushFeed(item){
+      feed.unshift(item);
+      if (feed.length > FEED_LIMIT) feed.length = FEED_LIMIT;
+      saveFeed();
+    }
+
+    // normalização de post (métricas)
+    function normalizePost(p){
+      if (!p || p.type !== 'post') return p;
+      if (typeof p.up !== 'number') p.up = 0;
+      if (typeof p.down !== 'number') p.down = 0;
+      if (!p.voters || typeof p.voters !== 'object') p.voters = {};
+      return p;
+    }
+
+    // votar: um por usuário (deviceId)
+    function votar(postId, tipo){ // 'up' | 'down'
+      const idx = feed.findIndex(it => it.type === 'post' && it.id === postId);
+      if (idx === -1) return;
+      const p = normalizePost(feed[idx]);
+
+      const prev = p.voters[deviceId];
+      if (prev === tipo) return; // já votou igual
+
+      if (prev === 'up' && p.up > 0) p.up--;
+      if (prev === 'down' && p.down > 0) p.down--;
+
+      if (tipo === 'up') p.up++;
+      if (tipo === 'down') p.down++;
+
+      p.voters[deviceId] = tipo;
+      feed[idx] = p;
+      saveFeed();
+      renderFeed();
+    }
+
+    /* ===== Scroll helpers ===== */
+    function getFeedScroller(){
+      return document.getElementById('feedScroll'); // quem de fato rola
+    }
+    function isNearBottom(el){
+      if (!el) return true;
+      return (el.scrollHeight - el.scrollTop - el.clientHeight) < 40;
+    }
+    function jumpToBottom(){
+      const scroller = getFeedScroller();
+      if (!scroller) return;
+      requestAnimationFrame(()=>{
+        scroller.scrollTop = scroller.scrollHeight;
+        requestAnimationFrame(()=>{
+          scroller.scrollTop = scroller.scrollHeight; // garante após imagens
+        });
+      });
+    }
+    function maybeJumpToBottom(){
+      const scroller = getFeedScroller();
+      if (isNearBottom(scroller)) jumpToBottom();
+    }
+
+    async function abrirFeed(e){
+      if (e) e.stopPropagation(); pauseOCR(true);
+
+      if (SYNC_TO_CLOUD) {
+        try {
+          const res = await fetch(`${API_BASE}/api/feed?deviceId=${encodeURIComponent(deviceId)}`);
+          const data = await res.json();
+          if (data && data.ok && Array.isArray(data.posts)) {
+            const newPosts = data.posts.map(p => normalizePost({
+              type:'post',
+              id: p.id,
+              ts: p.ts,
+              valor: p.valor,
+              img: p.img,
+              coords: p.coords || null,
+              up: p.up || 0,
+              down: p.down || 0,
+              voters: p.voters || {}
+            }));
+            const msgs = feed.filter(it => it.type === 'msg');
+            feed = [...newPosts, ...msgs].sort((a,b)=> new Date(b.ts) - new Date(a.ts));
+            if (feed.length > FEED_LIMIT) feed.length = FEED_LIMIT;
+            saveFeed();
+          }
+        } catch(e){ console.warn('cloud feed erro:', e); }
+      }
+
+      renderFeed();
+      document.getElementById('feedModal').classList.add('show');
+      feedOpen = true;
+      history.pushState({feed:true}, '');
+
+      // ao abrir, cola no fim (mensagem mais recente imediatamente visível)
+      jumpToBottom();
+    }
+
+    function fecharFeed(){
+      if (feedOpen) history.back();
+    }
+    function fecharFeedInternal(){
+      const modal = document.getElementById('feedModal');
+      if (modal) modal.classList.remove('show');
+      feedOpen = false;
+      pauseOCR(false);
+    }
+    window.addEventListener('popstate', ()=>{
+      if (feedOpen){
+        fecharFeedInternal();
+      }
+    });
+
+    function renderFeed(){
+      const lista = document.getElementById('feedLista');
+      const scroller = getFeedScroller();
+      const stick = isNearBottom(scroller);
+
+      if (lista) lista.innerHTML = '';
+
+      // ORDEM ASCENDENTE: antigos → novos (novos no fundo)
+      const items = [...feed].sort((a,b)=> new Date(a.ts) - new Date(b.ts));
+
+      if (!items.length){
+        const empty = document.createElement('div');
+        empty.className = 'hist-item';
+        empty.textContent = 'Envie uma mensagem ou poste uma foto abaixo.';
+        lista.appendChild(empty);
+      } else {
+        items.forEach(p=>{
+          if (p.type === 'msg'){
+            const card = document.createElement('div');
+            card.className = 'msg';
+            const text = document.createElement('div');
+            text.className = 'msg-text';
+            text.textContent = p.text || '';
+            const meta = document.createElement('div');
+            meta.className = 'msg-meta';
+            const when = new Date(p.ts).toLocaleString('pt-BR');
+            meta.textContent = when + (p.coords ? ' · com localização' : '');
+            const actions = document.createElement('div');
+            actions.className = 'actions';
+            const btnMap = document.createElement('button');
+            btnMap.className = 'btn-ghost'; btnMap.textContent = '📍 Rota';
+            if (p.coords){ btnMap.onclick = ()=> window.open(mapsRoute(p.coords.lat, p.coords.lng), '_blank'); }
+            else { btnMap.disabled = true; }
+            const btnShare = document.createElement('button');
+            btnShare.className = 'btn-ghost'; btnShare.textContent = '🔗 Compartilhar';
+            btnShare.onclick = ()=> shareMessage(p);
+            actions.appendChild(btnMap); actions.appendChild(btnShare);
+
+            card.appendChild(text);
+            card.appendChild(meta);
+            card.appendChild(actions);
+            lista.appendChild(card);
+          } else {
+            normalizePost(p);
+
+            const card = document.createElement('div'); card.className = 'post';
+            const img = document.createElement('img');
+            img.className = 'post-img';
+            img.src = p.img;
+            img.alt = p.valor ? `Preço: R$ ${Number(p.valor).toFixed(2)}` : 'Foto enviada';
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            img.onload = () => {
+              const scr = getFeedScroller();
+              if (isNearBottom(scr)) jumpToBottom();
+            };
+
+            const body = document.createElement('div'); body.className = 'post-body';
+            const title = document.createElement('div'); title.className='post-title';
+
+            const left = document.createElement('div');
+            if (typeof p.valor === 'number' && isFinite(p.valor) && p.valor > 0){
+              const price = document.createElement('div'); price.className='price'; price.textContent = 'R$ ' + Number(p.valor).toFixed(2);
+              left.appendChild(price);
+            } else {
+              const label = document.createElement('div'); label.className='loc'; label.textContent = '📷 Foto';
+              left.appendChild(label);
+            }
+
+            const when = document.createElement('div'); when.className='loc'; when.textContent = new Date(p.ts).toLocaleString('pt-BR') + (p.coords ? ' · Com localização' : ' · Sem localização');
+            title.appendChild(left); title.appendChild(when);
+
+            const actions = document.createElement('div'); actions.className='actions';
+            const btnMap = document.createElement('button'); btnMap.className='btn-ghost'; btnMap.textContent='📍 Rota';
+            if (p.coords){ btnMap.onclick = ()=> window.open(mapsRoute(p.coords.lat, p.coords.lng), '_blank'); }
+            else { btnMap.disabled = true; }
+            const btnShare = document.createElement('button'); btnShare.className='btn-ghost'; btnShare.textContent='🔗 Compartilhar';
+            btnShare.onclick = ()=> sharePost(p);
+            actions.appendChild(btnMap); actions.appendChild(btnShare);
+
+            // --- VOTOS ---
+            const userVote = p.voters && p.voters[deviceId];
+            const voteWrap = document.createElement('div');
+            voteWrap.style.display = 'flex';
+            voteWrap.style.alignItems = 'center';
+            voteWrap.style.gap = '6px';
+
+            const btnUp = document.createElement('button');
+            btnUp.className = 'btn-ghost' + (userVote === 'up' ? ' active' : '');
+            btnUp.textContent = '👍';
+            btnUp.onclick = () => votar(p.id, 'up');
+
+            const countSpan = document.createElement('span');
+            countSpan.className = 'loc';
+            countSpan.textContent = `${p.up || 0} · ${p.down || 0}`;
+
+            const btnDown = document.createElement('button');
+            btnDown.className = 'btn-ghost' + (userVote === 'down' ? ' active' : '');
+            btnDown.textContent = '👎';
+            btnDown.onclick = () => votar(p.id, 'down');
+
+            voteWrap.appendChild(btnUp);
+            voteWrap.appendChild(countSpan);
+            voteWrap.appendChild(btnDown);
+
+            actions.appendChild(voteWrap);
+
+            body.appendChild(title);
+            body.appendChild(actions);
+
+            card.appendChild(img); card.appendChild(body);
+            lista.appendChild(card);
+          }
+        });
+      }
+
+      if (stick) jumpToBottom();
+    }
+
+    function sharePost(p){
+      const precoTxt = (typeof p.valor === 'number' && isFinite(p.valor) && p.valor > 0) ? `Oferta: R$ ${Number(p.valor).toFixed(2)}\n` : '';
+      const text = `${precoTxt}${p.coords ? `Mapa: ${mapsRoute(p.coords.lat, p.coords.lng)}` : ''}`.trim();
+      try{
+        if (navigator.share){
+          navigator.share({ text: text || 'Foto do produto', title: 'Smart Cart', url: p.coords ? mapsRoute(p.coords.lat, p.coords.lng) : undefined });
+        } else {
+          const url = 'https://wa.me/?text=' + encodeURIComponent(text || 'Foto do produto');
+          window.open(url, '_blank');
+        }
+      }catch(e){ console.warn('share erro:', e); }
+    }
+    function shareMessage(p){
+      const text = `${p.text}${p.coords ? `\nMapa: ${mapsRoute(p.coords.lat, p.coords.lng)}` : ''}`;
+      try{
+        if (navigator.share){
+          navigator.share({ text, title: 'Smart Cart' });
+        } else {
+          const url = 'https://wa.me/?text=' + encodeURIComponent(text);
+          window.open(url, '_blank');
+        }
+      }catch(e){ console.warn('share erro:', e); }
+    }
+
+    /* ===== Enviar mensagem de texto ===== */
+    function enviarMensagem(){
+      const input = document.getElementById('chatInput');
+      let text = (input.value || '').trim();
+      if (!text) { input.blur(); return; } // teclado só se digitar
+
+      const id = Date.now() + '_' + Math.random().toString(36).slice(2,7);
+      const ts = new Date().toISOString();
+
+      const add = (coords)=> {
+        pushFeed({ type:'msg', id, ts, text, coords: coords || null, author: deviceId });
+        renderFeed();
+        maybeJumpToBottom();
+        input.value = '';
+        input.blur();
+      };
+
+      if (navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(
+          pos => add({ lat: pos.coords.latitude, lng: pos.coords.longitude } ),
+          ()  => add(null),
+          { enableHighAccuracy:true, timeout:7000 }
+        );
+      } else add(null);
+    }
+
+    /* ===== Botão de foto no chat ===== */
+    function abrirPickerFoto(){
+      const input = document.getElementById('photoInput');
+      if (!input) return;
+      input.value = '';
+      input.click();
+    }
+
+    document.getElementById('photoInput').addEventListener('change', async (e)=>{
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      await handleFotoSelecionada(file);
+    });
+
+    async function handleFotoSelecionada(file){
+      try{
+        const imgDataUrl = await fileToDataURL(file);
+        const compressed = await compressImage(imgDataUrl, 1280);
+
+        let priceRaw = prompt('Preço (opcional): ex. 10.50');
+        let valor = null;
+        if (priceRaw !== null){
+          const v = parseFloat((priceRaw || '').replace(',', '.'));
+          if (Number.isFinite(v) && v > 0) valor = v;
+        }
+
+        const postNow = (coords)=> {
+          pushFeed({
+            type:'post',
+            id: Date.now() + '_' + Math.random().toString(36).slice(2,7),
+            ts: new Date().toISOString(),
+            valor: (valor !== null ? +valor : undefined),
+            img: compressed,
+            coords: coords || null,
+            up: 0,
+            down: 0,
+            voters: {},
+            author: deviceId
+          });
+          renderFeed();
+          maybeJumpToBottom();
+        };
+
+        if (navigator.geolocation){
+          navigator.geolocation.getCurrentPosition(
+            pos => postNow({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            ()  => postNow(null),
+            { enableHighAccuracy:true, timeout:7000 }
+          );
+        } else {
+          postNow(null);
+        }
+
+        if (SYNC_TO_CLOUD){
+          try{
+            await fetch(`${API_BASE}/api/post`, {
+              method:'POST',
+              headers:{ 'Content-Type':'application/json' },
+              body: JSON.stringify({
+                deviceId, valor: (valor !== null ? +valor : null), coords: null, imageData: compressed
+              })
+            });
+          }catch(e){ console.warn('cloud post erro:', e); }
+        }
+
+      }catch(e){
+        console.warn('foto-picker erro:', e);
+        alert('Não foi possível processar a imagem.');
+      }
+    }
+
+    function fileToDataURL(file){
+      return new Promise((resolve, reject)=>{
+        const fr = new FileReader();
+        fr.onload = ()=> resolve(fr.result);
+        fr.onerror = reject;
+        fr.readAsDataURL(file);
+      });
+    }
+
+    function compressImage(dataUrl, maxW){
+      return new Promise((resolve)=>{
+        const img = new Image();
+        img.onload = ()=>{
+          let w = img.width, h = img.height;
+          if (w > maxW){
+            const s = maxW / w;
+            w = Math.round(w*s); h = Math.round(h*s);
+          }
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          const ctx = c.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          const out = c.toDataURL('image/jpeg', 0.7);
+          resolve(out);
+        };
+        img.onerror = ()=> resolve(dataUrl);
+        img.src = dataUrl;
+      });
+    }
+
+    /* ===== Captura foto + envia para chat (post) automática ao somar ===== */
+    async function capturarEEnviarImagem(valor) {
+      try {
+        const fullCanvas = document.createElement('canvas');
+        fullCanvas.width = video.videoWidth;
+        fullCanvas.height = video.videoHeight;
+        fullCanvas.getContext('2d').drawImage(video, 0, 0);
+
+        const maxW = 640;
+        let tw = fullCanvas.width, th = fullCanvas.height;
+        if (tw > maxW){ const s = maxW / tw; tw = Math.max(1, Math.round(tw*s)); th = Math.max(1, Math.round(th*s)); }
+        const thumb = document.createElement('canvas');
+        thumb.width = tw; thumb.height = th;
+        thumb.getContext('2d').drawImage(fullCanvas, 0, 0, tw, th);
+        const imageThumb = thumb.toDataURL('image/jpeg', 0.7);
+
+        if (shareToChat) {
+          navigator.geolocation.getCurrentPosition(async (position) => {
+            const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
+            pushFeed({
+              type:'post',
+              id: Date.now() + '_' + Math.random().toString(36).slice(2,7),
+              ts: new Date().toISOString(),
+              valor: +valor,
+              img: imageThumb,
+              coords,
+              up: 0,
+              down: 0,
+              voters: {},
+              author: deviceId
+            });
+            renderFeed();
+            maybeJumpToBottom();
+
+            if (SYNC_TO_CLOUD) {
+              try {
+                await fetch(`${API_BASE}/api/post`, {
+                  method: 'POST',
+                  headers: { 'Content-Type':'application/json' },
+                  body: JSON.stringify({ deviceId, valor:+valor, coords, imageData:imageThumb })
+                });
+              } catch(e){ console.warn('cloud post erro:', e); }
+            }
+          }, async () => {
+            pushFeed({
+              type:'post',
+              id: Date.now() + '_' + Math.random().toString(36).slice(2,7),
+              ts: new Date().toISOString(),
+              valor: +valor,
+              img: imageThumb,
+              coords: null,
+              up: 0,
+              down: 0,
+              voters: {},
+              author: deviceId
+            });
+            renderFeed();
+            maybeJumpToBottom();
+
+            if (SYNC_TO_CLOUD) {
+              try {
+                await fetch(`${API_BASE}/api/post`, {
+                  method: 'POST',
+                  headers: { 'Content-Type':'application/json' },
+                  body: JSON.stringify({ deviceId, valor:+valor, coords:null, imageData:imageThumb })
+                });
+              } catch(e){ console.warn('cloud post erro:', e); }
+            }
+          }, { enableHighAccuracy:true, timeout:7000 });
+        }
+      } catch (e) {
+        console.warn('snapshot/geo erro:', e);
+      }
+    }
+
+    // ===== Inicialização =====
+    setInterval(capturarImagemEProcessar, 1200);
+    iniciarCamera();       // tenta iniciar automaticamente
+    bindCameraAutostart(); // e também por gesto, se o browser exigir
+    loadState();
+  </script>
 </body>
 </html>
+
 
 
 
