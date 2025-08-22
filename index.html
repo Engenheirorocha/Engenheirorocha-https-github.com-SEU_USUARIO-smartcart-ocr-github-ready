@@ -106,9 +106,9 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 
 /* Sugestões de preço */
 .preco-btn{
-  font-size:1.08em; font-weight:700; padding:12px 14px;
+  font-size:1.06em; font-weight:700; padding:10px 12px;
   background: linear-gradient(180deg, rgba(26,44,32,0.95), rgba(18,33,24,0.92));
-  color:#dfffee; border:1px solid rgba(72,140,92,0.55); border-radius:14px; cursor:pointer;
+  color:#dfffee; border:1px solid rgba(72,140,92,0.55); border-radius:12px; cursor:pointer;
   display:flex; align-items:center; justify-content:center;
   transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, filter .12s ease;
   box-shadow: 0 6px 16px rgba(7,20,12,0.38);
@@ -116,22 +116,19 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 .preco-btn:hover{ transform: translateY(-1px); box-shadow: 0 12px 26px rgba(7,20,12,0.45); filter: brightness(1.03); }
 .preco-btn.pulse{ transform: scale(1.04) }
 
-/* Inputs/multiplicação + BOTÕES LADO DIREITO */
-.row{ display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap }
-
-/* NOVO: grid p/ alinhar campo manual à esquerda e todos os botões à direita */
+/* ---- CONTROLES: inputs à esquerda + COLUNA ESTREITA à direita ---- */
 .controls-grid{
   display:grid;
-  grid-template-columns: 1fr 200px; /* esquerda: inputs | direita: coluna de botões */
+  grid-template-columns: 1fr 120px; /* esquerda: inputs | direita: coluna de botões estreita */
   gap:12px;
   align-items:start;
 }
-@media (max-width:780px){
-  .controls-grid{ grid-template-columns: 1fr; }
+@media (max-width:820px){
+  .controls-grid{ grid-template-columns: 1fr; } /* empilha no mobile */
 }
 
 /* bloco esquerdo (inputs) */
-.controls-left{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+.controls-left{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; min-width:0; }
 .input{
   border:1px solid var(--card-border); background: rgba(10,14,32,0.55);
   color:var(--text); padding: 10px 12px; border-radius:12px; outline:none;
@@ -153,6 +150,8 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   padding:10px 12px; border-radius:12px; cursor:pointer;
   transition: transform .12s ease, background .12s ease, border-color .12s ease, box-shadow .12s ease, filter .12s ease;
   box-shadow: 0 6px 16px rgba(6,12,32,0.25);
+  font-weight:600;
+  line-height:1;
 }
 .btn:hover{ transform: translateY(-1px); filter: brightness(1.03); }
 .btn:active{ transform: translateY(0); filter: brightness(0.98); }
@@ -175,20 +174,20 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   color:#ffecec;
 }
 
-/* Coluna de botões à direita */
+/* Coluna de botões à direita – ESTREITA */
 .controls-buttons{
-  display:flex; flex-direction:column; gap:10px;
+  display:flex; flex-direction:column; gap:8px;
   align-items:stretch;
+  width:120px;           /* assegura largura estreita */
+  justify-self:end;      /* encosta na lateral direita do grid */
 }
 .controls-buttons .btn{
   width:100%;
-  min-height:44px;
-  display:flex; align-items:center; justify-content:center;
-  font-weight:600;
-  padding:12px 14px;
-  /* REDUÇÃO VISUAL PARA ~70% */
-  transform: scale(0.7);
-  transform-origin: top right;
+  min-height:36px;
+  padding:8px 10px;
+  font-size:12px;        /* reduz texto */
+  border-radius:10px;
+  white-space:nowrap;    /* evita quebra de linha nos rótulos */
 }
 
 /* Total */
@@ -229,7 +228,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   .modal-foot .btn, .foot-input{ width:100%; justify-self:stretch; }
 }
 
-/* Histórico / Feed (inalterado) */
+/* Histórico / Feed */
 .hist{ display:flex; flex-direction:column; gap:8px; }
 .hist-item{
   display:flex; align-items:center; justify-content:space-between; gap:8px;
@@ -297,7 +296,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       <div class="title">Sugestões de preço</div>
       <div id="precos"></div>
 
-      <!-- NOVO BLOCO: Inputs à esquerda | Botões (70%) à direita -->
+      <!-- CONTROLES: Inputs à esquerda | Botões estreitos à direita -->
       <div class="controls-grid">
         <div class="controls-left">
           <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor unitário (ex: 0.77)">
@@ -365,12 +364,13 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   <!-- Audio -->
   <audio id="bip-audio" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
 
-  <!-- JS (mesmo do seu app, intacto) -->
+  <!-- JS -->
   <script>
     /* ==== Cloud sync (Workers) ==== */
-    const SYNC_TO_CLOUD = false;
-    const API_BASE = "https://smartcart-chat.SEU_SUBDOMINIO.workers.dev";
+    const SYNC_TO_CLOUD = false; // troque para true quando tiver seu Worker
+    const API_BASE = "https://smartcart-chat.SEU_SUBDOMINIO.workers.dev"; // sua URL depois
 
+    // id único do aparelho
     const DID_KEY = 'sc_device_id';
     let deviceId = localStorage.getItem(DID_KEY);
     if (!deviceId) {
@@ -378,13 +378,15 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       localStorage.setItem(DID_KEY, deviceId);
     }
 
+    /* ===== Câmera / elementos ===== */
     const video = document.getElementById('video');
     const overlay = document.getElementById('overlay');
     const precosDiv = document.getElementById('precos');
     const somaSpan = document.getElementById('soma');
     const bip = document.getElementById('bip-audio');
 
-    const historico = [];
+    /* ===== Histórico sessão ===== */
+    const historico = []; // {tipo:'add'|'sub', valor, data, total}
     function registrar(tipo, valor){ historico.unshift({ tipo, valor, data: new Date(), total: total }); }
 
     let total = 0;
@@ -393,9 +395,11 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
     let valoresAdicionados = [];
     let sugestoesFixas = false;
 
+    // OCR cooldown
     let lastSuggestionsAt = 0;
     const SUGGESTIONS_COOLDOWN = 1200;
 
+    // ROI
     const roi = { x:0, y:0, w:0, h:0 };
 
     function syncOverlayToVideo(){
@@ -425,6 +429,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       ctx.shadowBlur = 0;
     }
 
+    /* ===== Persistência local ===== */
     const LS_KEYS = { total: 'sc_total', valores: 'sc_valores', historico: 'sc_hist', feed: 'sc_feed' };
 
     function saveState(){
@@ -459,13 +464,16 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       loadFeed();
     }
 
-    const shareToChat = true;
+    /* ===== Config de envio automático ===== */
+    const shareToChat = true; // sempre ligado
     function mapsRoute(lat, lng){ return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`; }
 
+    /* ===== Controle OCR pausa/retoma ===== */
     let ocrPaused = false;
     function pauseOCR(v){ ocrPaused = !!v; }
     document.addEventListener('visibilitychange', ()=>{ pauseOCR(document.hidden); });
 
+    /* ===== Câmera com fallback (traseira prioritária) ===== */
     let currentStream = null;
 
     async function startWithConstraints(constraints){
@@ -500,6 +508,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 
     async function iniciarCamera(){
       let lastErr;
+
       try{
         await startWithConstraints({ video: { facingMode: { exact: 'environment' } }, audio:false });
         await trySwitchToRearByDeviceId();
@@ -526,6 +535,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       alert("Não foi possível iniciar a câmera: " + (lastErr && lastErr.message ? lastErr.message : lastErr));
     }
 
+    // Alguns browsers (ex: Safari iOS) exigem gesto do usuário
     function bindCameraAutostart(){
       const wrap = document.querySelector('.videoWrap');
       if (!wrap) return;
@@ -538,6 +548,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       wrap.addEventListener('touchstart', handler, { once:true, passive:true });
     }
 
+    /* ===== Somatório ===== */
     function adicionarPreco(valor, btn) {
       total += valor;
       valoresAdicionados.push(valor);
@@ -568,6 +579,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       const resultado = valor * qtd;
       input.value = resultado.toFixed(2);
 
+      // feedback leve
       input.style.transform = 'scale(1.02)';
       setTimeout(()=>{ input.style.transform = 'scale(1)'; }, 120);
     }
@@ -604,7 +616,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       localStorage.removeItem(LS_KEYS.total);
       localStorage.removeItem(LS_KEYS.valores);
       localStorage.removeItem(LS_KEYS.historico);
-      saveFeed();
+      saveFeed(); // não apaga o chat
     }
 
     function desfazerUltimo() {
@@ -618,6 +630,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 
     function limparSugestoes() { precosDiv.innerHTML = ''; sugestoesFixas = false; }
 
+    /* ===== Histórico UI ===== */
     function abrirHistorico(e){
       if (e) e.stopPropagation(); pauseOCR(true);
       const el = document.getElementById('historicoModal');
@@ -654,6 +667,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
     document.getElementById('historicoModal').addEventListener('click', (e)=>{ if (e.target.id==='historicoModal') fecharHistorico(); });
     document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') { fecharHistorico(); fecharFeedInternal(); } });
 
+    /* ===== OCR ===== */
     async function capturarImagemEProcessar() {
       if (ocrPaused || isProcessing || video.videoWidth === 0) return;
       isProcessing = true; desenharROI();
@@ -699,9 +713,10 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       finally { isProcessing = false; }
     }
 
+    /* ===== Chat/Feed ===== */
     const FEED_LIMIT = 200;
-    let feed = [];
-    let feedOpen = false;
+    let feed = []; // it: {type:'post'|'msg', ...}
+    let feedOpen = false; // controla estado para o botão voltar
 
     function loadFeed(){
       try {
@@ -718,6 +733,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       saveFeed();
     }
 
+    // normalização de post (métricas)
     function normalizePost(p){
       if (!p || p.type !== 'post') return p;
       if (typeof p.up !== 'number') p.up = 0;
@@ -726,13 +742,14 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       return p;
     }
 
-    function votar(postId, tipo){
+    // votar: um por usuário (deviceId)
+    function votar(postId, tipo){ // 'up' | 'down'
       const idx = feed.findIndex(it => it.type === 'post' && it.id === postId);
       if (idx === -1) return;
       const p = normalizePost(feed[idx]);
 
       const prev = p.voters[deviceId];
-      if (prev === tipo) return;
+      if (prev === tipo) return; // já votou igual
 
       if (prev === 'up' && p.up > 0) p.up--;
       if (prev === 'down' && p.down > 0) p.down--;
@@ -746,14 +763,22 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       renderFeed();
     }
 
-    function getFeedScroller(){ return document.getElementById('feedScroll'); }
-    function isNearBottom(el){ if (!el) return true; return (el.scrollHeight - el.scrollTop - el.clientHeight) < 40; }
+    /* ===== Scroll helpers ===== */
+    function getFeedScroller(){
+      return document.getElementById('feedScroll'); // quem de fato rola
+    }
+    function isNearBottom(el){
+      if (!el) return true;
+      return (el.scrollHeight - el.scrollTop - el.clientHeight) < 40;
+    }
     function jumpToBottom(){
       const scroller = getFeedScroller();
       if (!scroller) return;
       requestAnimationFrame(()=>{
         scroller.scrollTop = scroller.scrollHeight;
-        requestAnimationFrame(()=>{ scroller.scrollTop = scroller.scrollHeight; });
+        requestAnimationFrame(()=>{
+          scroller.scrollTop = scroller.scrollHeight; // garante após imagens
+        });
       });
     }
     function maybeJumpToBottom(){
@@ -764,34 +789,12 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
     async function abrirFeed(e){
       if (e) e.stopPropagation(); pauseOCR(true);
 
-      if (SYNC_TO_CLOUD) {
-        try {
-          const res = await fetch(`${API_BASE}/api/feed?deviceId=${encodeURIComponent(deviceId)}`);
-          const data = await res.json();
-          if (data && data.ok && Array.isArray(data.posts)) {
-            const newPosts = data.posts.map(p => normalizePost({
-              type:'post',
-              id: p.id,
-              ts: p.ts,
-              valor: p.valor,
-              img: p.img,
-              coords: p.coords || null,
-              up: p.up || 0,
-              down: p.down || 0,
-              voters: p.voters || {}
-            }));
-            const msgs = feed.filter(it => it.type === 'msg');
-            feed = [...newPosts, ...msgs].sort((a,b)=> new Date(b.ts) - new Date(a.ts));
-            if (feed.length > FEED_LIMIT) feed.length = FEED_LIMIT;
-            saveFeed();
-          }
-        } catch(e){ console.warn('cloud feed erro:', e); }
-      }
-
       renderFeed();
       document.getElementById('feedModal').classList.add('show');
       feedOpen = true;
       history.pushState({feed:true}, '');
+
+      // ao abrir, cola no fim (mensagem mais recente imediatamente visível)
       jumpToBottom();
     }
 
@@ -816,6 +819,8 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       const stick = isNearBottom(scroller);
 
       if (lista) lista.innerHTML = '';
+
+      // ORDEM ASCENDENTE: antigos → novos (novos no fundo)
       const items = [...feed].sort((a,b)=> new Date(a.ts) - new Date(b.ts));
 
       if (!items.length){
@@ -860,7 +865,10 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
             img.alt = p.valor ? `Preço: R$ ${Number(p.valor).toFixed(2)}` : 'Foto enviada';
             img.loading = 'lazy';
             img.decoding = 'async';
-            img.onload = () => { const scr = getFeedScroller(); if (isNearBottom(scr)) jumpToBottom(); };
+            img.onload = () => {
+              const scr = getFeedScroller();
+              if (isNearBottom(scr)) jumpToBottom();
+            };
 
             const body = document.createElement('div'); body.className = 'post-body';
             const title = document.createElement('div'); title.className='post-title';
@@ -885,6 +893,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
             btnShare.onclick = ()=> sharePost(p);
             actions.appendChild(btnMap); actions.appendChild(btnShare);
 
+            // --- VOTOS ---
             const userVote = p.voters && p.voters[deviceId];
             const voteWrap = document.createElement('div');
             voteWrap.style.display = 'flex';
@@ -910,8 +919,10 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
             voteWrap.appendChild(btnDown);
 
             actions.appendChild(voteWrap);
+
             body.appendChild(title);
             body.appendChild(actions);
+
             card.appendChild(img); card.appendChild(body);
             lista.appendChild(card);
           }
@@ -945,6 +956,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       }catch(e){ console.warn('share erro:', e); }
     }
 
+    /* ===== Enviar mensagem de texto ===== */
     function enviarMensagem(){
       const input = document.getElementById('chatInput');
       let text = (input.value || '').trim();
@@ -970,6 +982,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       } else add(null);
     }
 
+    /* ===== Botão de foto no chat ===== */
     function abrirPickerFoto(){
       const input = document.getElementById('photoInput');
       if (!input) return;
@@ -1021,6 +1034,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
         } else {
           postNow(null);
         }
+
       }catch(e){
         console.warn('foto-picker erro:', e);
         alert('Não foi possível processar a imagem.');
@@ -1057,6 +1071,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       });
     }
 
+    /* ===== Captura foto + envia para chat (post) automática ao somar ===== */
     async function capturarEEnviarImagem(valor) {
       try {
         const fullCanvas = document.createElement('canvas');
@@ -1111,9 +1126,10 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       }
     }
 
+    // ===== Inicialização =====
     setInterval(capturarImagemEProcessar, 1200);
-    iniciarCamera();
-    bindCameraAutostart();
+    iniciarCamera();       // tenta iniciar automaticamente
+    bindCameraAutostart(); // e também por gesto, se o browser exigir
     loadState();
   </script>
 </body>
