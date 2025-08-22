@@ -26,6 +26,9 @@
       --warn:#f6c263;
       --err:#ff7c7c;
       --shadow: 0 10px 30px rgba(8,13,33,0.5), inset 0 1px rgba(255,255,255,0.05);
+
+      /* calculada via JS com a altura do header */
+      --hdrH: 64px;
     }
     *{ box-sizing:border-box }
     html,body{ height:100% }
@@ -33,132 +36,141 @@
       margin:0; color:var(--text);
       font: 500 15px/1.55 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       background: var(--bg); background-image: var(--bg-grad);
+      overflow:hidden; /* sem rolagem da página */
+      -webkit-tap-highlight-color: transparent;
     }
 
-    /* Header */
-    header{
+    /* Header compacto */
+    header#hdr{
       position: sticky; top:0; z-index:10;
       backdrop-filter: blur(10px);
       background: linear-gradient(180deg, rgba(8,12,28,0.7), rgba(8,12,28,0.25));
       border-bottom: 1px solid var(--card-border);
     }
-    .wrap{ max-width:1200px; margin:0 auto; padding:14px 18px; display:flex; justify-content:center; }
-    .brand{ display:flex; align-items:center; gap:12px; }
+    .wrap{ max-width:1200px; margin:0 auto; padding:10px 16px; display:flex; justify-content:center; }
+    .brand{ display:flex; align-items:center; gap:10px; }
     .logo{
-      width:34px; height:34px; border-radius:9px;
+      width:32px; height:32px; border-radius:9px;
       background: linear-gradient(135deg, #6ea8fe, #36d399);
       box-shadow: 0 6px 18px rgba(110,168,254,0.35);
       display:grid; place-items:center;
     }
-    .logo svg{ width:20px; height:20px; stroke:#ffffff; }
-    h1{ font-size:18px; font-weight:700; margin:0; letter-spacing:.2px }
+    .logo svg{ width:18px; height:18px; stroke:#ffffff; }
+    h1{ font-size:17px; font-weight:700; margin:0; letter-spacing:.2px }
 
-    /* Layout principal */
-    main{
-      max-width:1200px; margin:18px auto; padding:0 14px;
-      display:grid; grid-template-columns:1.6fr 1fr; gap:16px;
+    /* Layout principal ocupa 100vh - header */
+    main#app{
+      height: calc(100vh - var(--hdrH));
+      max-width:1200px; margin:0 auto; padding:12px;
+      display:grid; grid-template-columns:1.6fr 1fr; gap:12px;
+      min-height:0; /* permite filhos ter overflow interno */
     }
-    @media (max-width:980px){ main{ grid-template-columns:1fr } }
+    @media (max-width:980px){
+      /* em telas menores, uma coluna e duas “linhas” (câmera 58% / controles 42%) */
+      main#app{
+        grid-template-columns:1fr;
+        grid-template-rows: 0.58fr 0.42fr;
+      }
+    }
+
     .card{
       background: var(--card);
       border: 1px solid var(--card-border);
       border-radius: 16px;
       box-shadow: var(--shadow);
-      padding: 14px;
+      padding: 12px;
+      min-height:0;
     }
-    .stack{ display:flex; flex-direction:column; gap:12px }
 
-    /* Câmera */
+    /* Coluna esquerda: câmera preenche a área */
+    #leftPanel{ display:flex; flex-direction:column; gap:8px; min-height:0; }
     .videoWrap{
       position: relative; border-radius: 14px; overflow: hidden;
       border: 1px solid var(--card-border); background: rgba(0,0,0,0.35);
-      aspect-ratio: 16/9; box-shadow: var(--shadow);
-      cursor: pointer; /* toque para iniciar no iOS, se precisar */
+      flex:1; min-height:0; box-shadow: var(--shadow); cursor: pointer;
     }
-    @media (max-width:980px){ .videoWrap{ aspect-ratio:auto; height:56vh } }
     video{ width:100%; height:100%; object-fit:cover; display:block; }
     #overlay{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
-
-    /* HUD */
     .hud{ position:absolute; left:10px; bottom:10px; display:flex; gap:8px; flex-wrap:wrap; }
     .tag{
       background: rgba(12,18,40,0.7); border: 1px solid var(--card-border);
       color: var(--muted); padding: 6px 8px; font-size:12px; border-radius: 10px; backdrop-filter: blur(6px);
     }
+    .tip{ font-size:12.5px; color:var(--muted); }
 
-    /* Coluna direita */
-    .title{ font-size:13px; color:var(--muted); letter-spacing:.4px; text-transform:uppercase }
-    #precos{ display:flex; flex-direction:column; gap:10px; max-height:48vh; overflow:auto; padding-right:4px; }
+    /* Coluna direita com layout vertical e rolagem interna para sugestões */
+    #sidePanel{ display:flex; flex-direction:column; gap:10px; min-height:0; }
+    .title{ font-size:12px; color:var(--muted); letter-spacing:.4px; text-transform:uppercase }
+
+    #precos{
+      display:flex; flex-direction:column; gap:8px;
+      flex:1; min-height:0; overflow:auto; padding-right:4px;
+    }
     .preco-btn{
-      font-size:1.1em; font-weight:600; padding:12px 14px;
-      background: linear-gradient(180deg, rgba(24,42,30,0.9), rgba(18,33,24,0.9));
-      color:#d9ffe9; border:1px solid rgba(72,140,92,0.45); border-radius:12px; cursor:pointer;
+      font-size:1.05em; font-weight:700; padding:12px 14px;
+      background: linear-gradient(180deg, rgba(24,42,30,0.95), rgba(18,33,24,0.9));
+      color:#d9ffe9; border:1px solid rgba(72,140,92,0.5); border-radius:12px; cursor:pointer;
       display:flex; align-items:center; justify-content:center;
       transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
       box-shadow: 0 6px 16px rgba(7,20,12,0.35);
     }
     .preco-btn:hover{ transform: translateY(-1px); box-shadow: 0 10px 24px rgba(7,20,12,0.45); border-color: rgba(72,140,92,0.7) }
-    .preco-btn.pulse{ transform: scale(1.04) }
+    .preco-btn.pulse{ transform: scale(1.035) }
 
-    /* Inputs/botões */
-    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+    /* Inputs / botões */
+    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
     .input{
-      border:1px solid var(--card-border); background: rgba(8,12,28,0.6);
+      border:1px solid var(--card-border); background: rgba(8,12,28,0.65);
       color:var(--text); padding: 10px 12px; border-radius:12px; outline:none;
+      min-width:0;
     }
-    .input-qty{ width:92px; text-align:center; }
+    .input-qty{ width:96px; text-align:center; }
     .mult-group{ display:flex; gap:8px; align-items:center; }
 
     .btn{
-      border:1px solid var(--card-border); background: rgba(8,12,28,0.6);
+      border:1px solid var(--card-border);
+      background: linear-gradient(180deg, rgba(8,12,28,0.75), rgba(8,12,28,0.55));
       color:var(--text); padding:10px 12px; border-radius:12px; cursor:pointer;
-      transition: transform .12s ease, background .12s ease, border-color .12s ease;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease, box-shadow .12s ease;
+      display:inline-flex; align-items:center; gap:8px;
+      user-select:none; touch-action: manipulation;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
     .btn:hover{ transform: translateY(-1px) }
-    .btn.ok{ background: linear-gradient(180deg, rgba(16,36,28,0.9), rgba(14,30,24,0.9)); border-color: rgba(72,140,92,0.45) }
-    .btn.warn{ background: linear-gradient(180deg, rgba(50,40,18,0.9), rgba(38,28,10,0.9)); border-color: rgba(181,148,75,0.45) }
-    .btn.err{ background: linear-gradient(180deg, rgba(52,24,24,0.9), rgba(36,16,16,0.9)); border-color: rgba(164,74,74,0.45) }
+    .btn:active{ transform: translateY(0); box-shadow:none; }
+    .btn.ok{ background: linear-gradient(180deg, rgba(22,48,36,0.95), rgba(14,30,24,0.9)); border-color: rgba(72,140,92,0.5) }
+    .btn.warn{ background: linear-gradient(180deg, rgba(50,40,18,0.95), rgba(38,28,10,0.9)); border-color: rgba(181,148,75,0.5) }
+    .btn.err{ background: linear-gradient(180deg, rgba(52,24,24,0.95), rgba(36,16,16,0.9)); border-color: rgba(164,74,74,0.5) }
 
-    /* Destaque de voto ativo */
-    .btn-ghost.active{
-      outline: 2px solid rgba(110,168,254,0.6);
-      outline-offset: 2px;
-    }
-
-    /* Total */
+    /* Rodapé do painel direito */
     #total{
-      font-size: 1.8em; color:#c5f8d7; display:flex; align-items:center; justify-content:space-between;
-      padding-top:8px; margin-top:6px; border-top:1px dashed var(--card-border);
+      font-size: 1.6em; color:#c5f8d7; display:flex; align-items:center; justify-content:space-between;
+      padding-top:8px; margin-top:auto; border-top:1px dashed var(--card-border);
     }
 
-    /* Tip */
-    .tip{ font-size:13px; color:var(--muted); border-left:3px solid rgba(110,168,254,0.5); padding-left:10px; }
-
-    /* ===== Modal base ===== */
+    /* ===== Modais ===== */
     .modal{
       position: fixed; inset: 0; display:none; align-items:center; justify-content:center;
       background: rgba(5,8,20,0.6); backdrop-filter: blur(6px); z-index: 999;
     }
     .modal.show{ display:flex }
     .modal-card{
-      width:min(800px, 92vw); background: var(--card); border: 1px solid var(--card-border);
-      border-radius:16px; box-shadow: var(--shadow); padding: 12px; display:flex; flex-direction:column; max-height:90vh;
+      width:min(820px, 94vw); background: var(--card); border: 1px solid var(--card-border);
+      border-radius:16px; box-shadow: var(--shadow); padding: 12px; display:flex; flex-direction:column; max-height:92vh;
     }
     .modal-head{
       display:flex; align-items:center; justify-content:space-between; gap:10px;
       padding:6px 6px 10px 6px; border-bottom: 1px dashed var(--card-border);
     }
     .modal-title{ font-weight:700; letter-spacing:.3px }
-    .modal-body{ overflow:auto; padding-top:10px; }
+    .modal-body{ overflow:auto; padding-top:10px; min-height:0; }
 
     /* RODAPÉ DO CHAT (limpo) */
     .modal-foot{
       border-top:1px dashed var(--card-border);
       margin-top:10px; padding:10px;
       position:sticky; bottom:0; background:var(--card);
-      display:grid;
-      grid-template-columns: 1fr auto auto; /* [input] [foto] [enviar] */
-      gap:8px; align-items:center;
+      display:grid; grid-template-columns: 1fr auto auto; gap:8px; align-items:center;
     }
     .foot-input{ flex:1; min-width:0; }
     @media (max-width:600px){
@@ -196,7 +208,6 @@
     }
     .btn-ghost[disabled]{ opacity:.5; cursor:not-allowed }
 
-    /* Mensagens de texto no chat (feed) */
     .msg{
       border:1px solid var(--card-border); border-radius:14px; background: rgba(8,12,28,0.5);
       padding:10px 12px; display:flex; flex-direction:column; gap:6px;
@@ -207,7 +218,7 @@
 </head>
 <body>
   <!-- Header -->
-  <header>
+  <header id="hdr">
     <div class="wrap">
       <div class="brand">
         <div class="logo" aria-hidden="true">
@@ -224,9 +235,9 @@
   </header>
 
   <!-- Main -->
-  <main>
+  <main id="app">
     <!-- Esquerda: câmera + HUD -->
-    <section class="card stack">
+    <section id="leftPanel" class="card">
       <div class="videoWrap" title="Toque para iniciar a câmera se necessário">
         <video id="video" autoplay playsinline muted></video>
         <canvas id="overlay"></canvas>
@@ -234,11 +245,11 @@
           <span class="tag">Mire a etiqueta dentro do retângulo (50% × 20%)</span>
         </div>
       </div>
-      <div class="tip">A leitura ocorre automaticamente ~a cada 1,2s. Use a câmera traseira e mantenha a etiqueta bem enquadrada. Toque na área da câmera se ela não iniciar automaticamente.</div>
+      <div class="tip">Leitura automática ~1,2s. Use a câmera traseira e mantenha a etiqueta bem enquadrada. Toque na área da câmera se ela não iniciar automaticamente.</div>
     </section>
 
     <!-- Direita: sugestões + controles + total -->
-    <aside class="card stack">
+    <aside id="sidePanel" class="card">
       <div class="title">Sugestões de preço</div>
       <div id="precos"></div>
 
@@ -292,7 +303,7 @@
   <div id="feedModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="feedTitle">
     <div class="modal-card">
       <div class="modal-head">
-        <div class="modal-title" id="feedTitle"><!-- título removido --></div>
+        <div class="modal-title" id="feedTitle"></div>
         <div style="display:flex; gap:8px">
           <button class="btn" onclick="fecharFeed()">✖ Fechar</button>
         </div>
@@ -328,11 +339,21 @@
     }
 
     /* ===== Câmera / elementos ===== */
+    const headerEl = document.getElementById('hdr');
+    const appEl = document.getElementById('app');
     const video = document.getElementById('video');
     const overlay = document.getElementById('overlay');
     const precosDiv = document.getElementById('precos');
     const somaSpan = document.getElementById('soma');
     const bip = document.getElementById('bip-audio');
+
+    /* ===== Ajustar altura do main para caber no viewport ===== */
+    function setAppHeight(){
+      const h = headerEl.offsetHeight || 64;
+      document.documentElement.style.setProperty('--hdrH', h + 'px');
+    }
+    window.addEventListener('resize', setAppHeight);
+    window.addEventListener('orientationchange', setAppHeight);
 
     /* ===== Histórico sessão ===== */
     const historico = []; // {tipo:'add'|'sub', valor, data, total}
@@ -457,34 +478,24 @@
 
     async function iniciarCamera(){
       let lastErr;
-
       try{
         await startWithConstraints({ video: { facingMode: { exact: 'environment' } }, audio:false });
-        await trySwitchToRearByDeviceId();
-        return;
+        await trySwitchToRearByDeviceId(); return;
       }catch(e){ lastErr = e; }
-
       try{
         await startWithConstraints({ video: { facingMode: { ideal: 'environment' } }, audio:false });
-        await trySwitchToRearByDeviceId();
-        return;
+        await trySwitchToRearByDeviceId(); return;
       }catch(e){ lastErr = e; }
-
       try{
         await startWithConstraints({ video: true, audio:false });
-        await trySwitchToRearByDeviceId();
-        return;
+        await trySwitchToRearByDeviceId(); return;
       }catch(e){ lastErr = e; }
-
-      try{
-        await startWithConstraints({ video: true, audio:false });
-        return;
-      }catch(e){ lastErr = e; }
-
+      try{ await startWithConstraints({ video: true, audio:false }); return; }
+      catch(e){ lastErr = e; }
       alert("Não foi possível iniciar a câmera: " + (lastErr && lastErr.message ? lastErr.message : lastErr));
     }
 
-    // Alguns browsers (ex: Safari iOS) exigem gesto do usuário
+    // Alguns browsers exigem gesto do usuário (ex.: iOS)
     function bindCameraAutostart(){
       const wrap = document.querySelector('.videoWrap');
       if (!wrap) return;
@@ -517,18 +528,14 @@
 
       if (isNaN(valor) || valor <= 0){
         alert('Digite primeiro um valor unitário válido.');
-        input.focus();
-        return;
+        input.focus(); return;
       }
       if (!Number.isInteger(qtd) || qtd < 1){
         alert('Quantidade inválida. Use um número inteiro ≥ 1.');
-        qtyEl.focus();
-        return;
+        qtyEl.focus(); return;
       }
       const resultado = valor * qtd;
       input.value = resultado.toFixed(2);
-
-      // feedback leve
       input.style.transform = 'scale(1.02)';
       setTimeout(()=>{ input.style.transform = 'scale(1)'; }, 120);
     }
@@ -662,129 +669,41 @@
       finally { isProcessing = false; }
     }
 
-    /* ===== Chat/Feed ===== */
+    /* ===== Chat/Feed ===== (mesma lógica do seu arquivo) */
     const FEED_LIMIT = 200;
-    let feed = []; // it: {type:'post'|'msg', ...}
-    let feedOpen = false; // controla estado para o botão voltar
+    let feed = [];
+    let feedOpen = false;
 
     function loadFeed(){
-      try {
-        const f = JSON.parse(localStorage.getItem(LS_KEYS.feed) || '[]');
-        if (Array.isArray(f)) feed = f;
-      } catch { feed = []; }
+      try { const f = JSON.parse(localStorage.getItem(LS_KEYS.feed) || '[]'); if (Array.isArray(f)) feed = f; }
+      catch { feed = []; }
     }
-    function saveFeed(){
-      localStorage.setItem(LS_KEYS.feed, JSON.stringify(feed));
-    }
-    function pushFeed(item){
-      feed.unshift(item);
-      if (feed.length > FEED_LIMIT) feed.length = FEED_LIMIT;
-      saveFeed();
-    }
+    function saveFeed(){ localStorage.setItem(LS_KEYS.feed, JSON.stringify(feed)); }
+    function pushFeed(item){ feed.unshift(item); if (feed.length > FEED_LIMIT) feed.length = FEED_LIMIT; saveFeed(); }
 
-    // normalização de post (métricas)
-    function normalizePost(p){
-      if (!p || p.type !== 'post') return p;
-      if (typeof p.up !== 'number') p.up = 0;
-      if (typeof p.down !== 'number') p.down = 0;
-      if (!p.voters || typeof p.voters !== 'object') p.voters = {};
-      return p;
-    }
-
-    // votar: um por usuário (deviceId)
-    function votar(postId, tipo){ // 'up' | 'down'
-      const idx = feed.findIndex(it => it.type === 'post' && it.id === postId);
-      if (idx === -1) return;
-      const p = normalizePost(feed[idx]);
-
-      const prev = p.voters[deviceId];
-      if (prev === tipo) return; // já votou igual
-
-      if (prev === 'up' && p.up > 0) p.up--;
-      if (prev === 'down' && p.down > 0) p.down--;
-
-      if (tipo === 'up') p.up++;
-      if (tipo === 'down') p.down++;
-
-      p.voters[deviceId] = tipo;
-      feed[idx] = p;
-      saveFeed();
-      renderFeed();
-    }
-
-    /* ===== Scroll helpers ===== */
-    function getFeedScroller(){
-      return document.getElementById('feedScroll'); // quem de fato rola
-    }
-    function isNearBottom(el){
-      if (!el) return true;
-      return (el.scrollHeight - el.scrollTop - el.clientHeight) < 40;
-    }
+    function getFeedScroller(){ return document.getElementById('feedScroll'); }
+    function isNearBottom(el){ if (!el) return true; return (el.scrollHeight - el.scrollTop - el.clientHeight) < 40; }
     function jumpToBottom(){
-      const scroller = getFeedScroller();
-      if (!scroller) return;
-      requestAnimationFrame(()=>{
-        scroller.scrollTop = scroller.scrollHeight;
-        requestAnimationFrame(()=>{
-          scroller.scrollTop = scroller.scrollHeight; // garante após imagens
-        });
-      });
+      const scroller = getFeedScroller(); if (!scroller) return;
+      requestAnimationFrame(()=>{ scroller.scrollTop = scroller.scrollHeight; requestAnimationFrame(()=>{ scroller.scrollTop = scroller.scrollHeight; }); });
     }
-    function maybeJumpToBottom(){
-      const scroller = getFeedScroller();
-      if (isNearBottom(scroller)) jumpToBottom();
-    }
+    function maybeJumpToBottom(){ const sc = getFeedScroller(); if (isNearBottom(sc)) jumpToBottom(); }
 
     async function abrirFeed(e){
       if (e) e.stopPropagation(); pauseOCR(true);
-
-      if (SYNC_TO_CLOUD) {
-        try {
-          const res = await fetch(`${API_BASE}/api/feed?deviceId=${encodeURIComponent(deviceId)}`);
-          const data = await res.json();
-          if (data && data.ok && Array.isArray(data.posts)) {
-            const newPosts = data.posts.map(p => normalizePost({
-              type:'post',
-              id: p.id,
-              ts: p.ts,
-              valor: p.valor,
-              img: p.img,
-              coords: p.coords || null,
-              up: p.up || 0,
-              down: p.down || 0,
-              voters: p.voters || {}
-            }));
-            const msgs = feed.filter(it => it.type === 'msg');
-            feed = [...newPosts, ...msgs].sort((a,b)=> new Date(b.ts) - new Date(a.ts));
-            if (feed.length > FEED_LIMIT) feed.length = FEED_LIMIT;
-            saveFeed();
-          }
-        } catch(e){ console.warn('cloud feed erro:', e); }
-      }
-
       renderFeed();
       document.getElementById('feedModal').classList.add('show');
       feedOpen = true;
       history.pushState({feed:true}, '');
-
-      // ao abrir, cola no fim (mensagem mais recente imediatamente visível)
-      jumpToBottom();
+      jumpToBottom(); // mostra a mais recente
     }
-
-    function fecharFeed(){
-      if (feedOpen) history.back();
-    }
+    function fecharFeed(){ if (feedOpen) history.back(); }
     function fecharFeedInternal(){
       const modal = document.getElementById('feedModal');
       if (modal) modal.classList.remove('show');
-      feedOpen = false;
-      pauseOCR(false);
+      feedOpen = false; pauseOCR(false);
     }
-    window.addEventListener('popstate', ()=>{
-      if (feedOpen){
-        fecharFeedInternal();
-      }
-    });
+    window.addEventListener('popstate', ()=>{ if (feedOpen){ fecharFeedInternal(); } });
 
     function renderFeed(){
       const lista = document.getElementById('feedLista');
@@ -793,7 +712,7 @@
 
       if (lista) lista.innerHTML = '';
 
-      // ORDEM ASCENDENTE: antigos → novos (novos no fundo)
+      // antigos -> novos (novos embaixo)
       const items = [...feed].sort((a,b)=> new Date(a.ts) - new Date(b.ts));
 
       if (!items.length){
@@ -804,48 +723,27 @@
       } else {
         items.forEach(p=>{
           if (p.type === 'msg'){
-            const card = document.createElement('div');
-            card.className = 'msg';
-            const text = document.createElement('div');
-            text.className = 'msg-text';
-            text.textContent = p.text || '';
-            const meta = document.createElement('div');
-            meta.className = 'msg-meta';
-            const when = new Date(p.ts).toLocaleString('pt-BR');
-            meta.textContent = when + (p.coords ? ' · com localização' : '');
-            const actions = document.createElement('div');
-            actions.className = 'actions';
-            const btnMap = document.createElement('button');
-            btnMap.className = 'btn-ghost'; btnMap.textContent = '📍 Rota';
-            if (p.coords){ btnMap.onclick = ()=> window.open(mapsRoute(p.coords.lat, p.coords.lng), '_blank'); }
-            else { btnMap.disabled = true; }
-            const btnShare = document.createElement('button');
-            btnShare.className = 'btn-ghost'; btnShare.textContent = '🔗 Compartilhar';
+            const card = document.createElement('div'); card.className = 'msg';
+            const text = document.createElement('div'); text.className = 'msg-text'; text.textContent = p.text || '';
+            const meta = document.createElement('div'); meta.className = 'msg-meta';
+            const when = new Date(p.ts).toLocaleString('pt-BR'); meta.textContent = when + (p.coords ? ' · com localização' : '');
+            const actions = document.createElement('div'); actions.className = 'actions';
+            const btnMap = document.createElement('button'); btnMap.className = 'btn-ghost'; btnMap.textContent = '📍 Rota';
+            if (p.coords){ btnMap.onclick = ()=> window.open(mapsRoute(p.coords.lat, p.coords.lng), '_blank'); } else { btnMap.disabled = true; }
+            const btnShare = document.createElement('button'); btnShare.className = 'btn-ghost'; btnShare.textContent = '🔗 Compartilhar';
             btnShare.onclick = ()=> shareMessage(p);
             actions.appendChild(btnMap); actions.appendChild(btnShare);
-
-            card.appendChild(text);
-            card.appendChild(meta);
-            card.appendChild(actions);
+            card.appendChild(text); card.appendChild(meta); card.appendChild(actions);
             lista.appendChild(card);
           } else {
-            normalizePost(p);
-
             const card = document.createElement('div'); card.className = 'post';
-            const img = document.createElement('img');
-            img.className = 'post-img';
-            img.src = p.img;
+            const img = document.createElement('img'); img.className = 'post-img'; img.src = p.img;
             img.alt = p.valor ? `Preço: R$ ${Number(p.valor).toFixed(2)}` : 'Foto enviada';
-            img.loading = 'lazy';
-            img.decoding = 'async';
-            img.onload = () => {
-              const scr = getFeedScroller();
-              if (isNearBottom(scr)) jumpToBottom();
-            };
+            img.loading = 'lazy'; img.decoding = 'async';
+            img.onload = () => { const scr = getFeedScroller(); if (isNearBottom(scr)) jumpToBottom(); };
 
             const body = document.createElement('div'); body.className = 'post-body';
             const title = document.createElement('div'); title.className='post-title';
-
             const left = document.createElement('div');
             if (typeof p.valor === 'number' && isFinite(p.valor) && p.valor > 0){
               const price = document.createElement('div'); price.className='price'; price.textContent = 'R$ ' + Number(p.valor).toFixed(2);
@@ -854,48 +752,18 @@
               const label = document.createElement('div'); label.className='loc'; label.textContent = '📷 Foto';
               left.appendChild(label);
             }
-
-            const when = document.createElement('div'); when.className='loc'; when.textContent = new Date(p.ts).toLocaleString('pt-BR') + (p.coords ? ' · Com localização' : ' · Sem localização');
+            const when = document.createElement('div'); when.className='loc';
+            when.textContent = new Date(p.ts).toLocaleString('pt-BR') + (p.coords ? ' · Com localização' : ' · Sem localização');
             title.appendChild(left); title.appendChild(when);
 
             const actions = document.createElement('div'); actions.className='actions';
             const btnMap = document.createElement('button'); btnMap.className='btn-ghost'; btnMap.textContent='📍 Rota';
-            if (p.coords){ btnMap.onclick = ()=> window.open(mapsRoute(p.coords.lat, p.coords.lng), '_blank'); }
-            else { btnMap.disabled = true; }
+            if (p.coords){ btnMap.onclick = ()=> window.open(mapsRoute(p.coords.lat, p.coords.lng), '_blank'); } else { btnMap.disabled = true; }
             const btnShare = document.createElement('button'); btnShare.className='btn-ghost'; btnShare.textContent='🔗 Compartilhar';
             btnShare.onclick = ()=> sharePost(p);
             actions.appendChild(btnMap); actions.appendChild(btnShare);
 
-            // --- VOTOS ---
-            const userVote = p.voters && p.voters[deviceId];
-            const voteWrap = document.createElement('div');
-            voteWrap.style.display = 'flex';
-            voteWrap.style.alignItems = 'center';
-            voteWrap.style.gap = '6px';
-
-            const btnUp = document.createElement('button');
-            btnUp.className = 'btn-ghost' + (userVote === 'up' ? ' active' : '');
-            btnUp.textContent = '👍';
-            btnUp.onclick = () => votar(p.id, 'up');
-
-            const countSpan = document.createElement('span');
-            countSpan.className = 'loc';
-            countSpan.textContent = `${p.up || 0} · ${p.down || 0}`;
-
-            const btnDown = document.createElement('button');
-            btnDown.className = 'btn-ghost' + (userVote === 'down' ? ' active' : '');
-            btnDown.textContent = '👎';
-            btnDown.onclick = () => votar(p.id, 'down');
-
-            voteWrap.appendChild(btnUp);
-            voteWrap.appendChild(countSpan);
-            voteWrap.appendChild(btnDown);
-
-            actions.appendChild(voteWrap);
-
-            body.appendChild(title);
-            body.appendChild(actions);
-
+            body.appendChild(title); body.appendChild(actions);
             card.appendChild(img); card.appendChild(body);
             lista.appendChild(card);
           }
@@ -929,11 +797,11 @@
       }catch(e){ console.warn('share erro:', e); }
     }
 
-    /* ===== Enviar mensagem de texto ===== */
+    /* ===== Mensagem de texto ===== */
     function enviarMensagem(){
       const input = document.getElementById('chatInput');
       let text = (input.value || '').trim();
-      if (!text) { input.blur(); return; } // teclado só se digitar
+      if (!text) { input.blur(); return; }
 
       const id = Date.now() + '_' + Math.random().toString(36).slice(2,7);
       const ts = new Date().toISOString();
@@ -955,7 +823,7 @@
       } else add(null);
     }
 
-    /* ===== Botão de foto no chat ===== */
+    /* ===== Foto no chat ===== */
     function abrirPickerFoto(){
       const input = document.getElementById('photoInput');
       if (!input) return;
@@ -989,9 +857,6 @@
             valor: (valor !== null ? +valor : undefined),
             img: compressed,
             coords: coords || null,
-            up: 0,
-            down: 0,
-            voters: {},
             author: deviceId
           });
           renderFeed();
@@ -1027,36 +892,20 @@
     }
 
     function fileToDataURL(file){
-      return new Promise((resolve, reject)=>{
-        const fr = new FileReader();
-        fr.onload = ()=> resolve(fr.result);
-        fr.onerror = reject;
-        fr.readAsDataURL(file);
-      });
+      return new Promise((resolve, reject)=>{ const fr = new FileReader(); fr.onload = ()=> resolve(fr.result); fr.onerror = reject; fr.readAsDataURL(file); });
     }
-
     function compressImage(dataUrl, maxW){
-      return new Promise((resolve)=>{
-        const img = new Image();
-        img.onload = ()=>{
-          let w = img.width, h = img.height;
-          if (w > maxW){
-            const s = maxW / w;
-            w = Math.round(w*s); h = Math.round(h*s);
-          }
-          const c = document.createElement('canvas');
-          c.width = w; c.height = h;
-          const ctx = c.getContext('2d');
-          ctx.drawImage(img, 0, 0, w, h);
-          const out = c.toDataURL('image/jpeg', 0.7);
-          resolve(out);
+      return new Promise((resolve)=>{ const img = new Image();
+        img.onload = ()=>{ let w = img.width, h = img.height;
+          if (w > maxW){ const s = maxW / w; w = Math.round(w*s); h = Math.round(h*s); }
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+          const out = c.toDataURL('image/jpeg', 0.7); resolve(out);
         };
-        img.onerror = ()=> resolve(dataUrl);
-        img.src = dataUrl;
-      });
+        img.onerror = ()=> resolve(dataUrl); img.src = dataUrl; });
     }
 
-    /* ===== Captura foto + envia para chat (post) automática ao somar ===== */
+    /* ===== Captura automática ao somar ===== */
     async function capturarEEnviarImagem(valor) {
       try {
         const fullCanvas = document.createElement('canvas');
@@ -1075,20 +924,8 @@
         if (shareToChat) {
           navigator.geolocation.getCurrentPosition(async (position) => {
             const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
-            pushFeed({
-              type:'post',
-              id: Date.now() + '_' + Math.random().toString(36).slice(2,7),
-              ts: new Date().toISOString(),
-              valor: +valor,
-              img: imageThumb,
-              coords,
-              up: 0,
-              down: 0,
-              voters: {},
-              author: deviceId
-            });
-            renderFeed();
-            maybeJumpToBottom();
+            pushFeed({ type:'post', id: Date.now() + '_' + Math.random().toString(36).slice(2,7), ts: new Date().toISOString(), valor:+valor, img:imageThumb, coords, author: deviceId });
+            renderFeed(); maybeJumpToBottom();
 
             if (SYNC_TO_CLOUD) {
               try {
@@ -1100,20 +937,8 @@
               } catch(e){ console.warn('cloud post erro:', e); }
             }
           }, async () => {
-            pushFeed({
-              type:'post',
-              id: Date.now() + '_' + Math.random().toString(36).slice(2,7),
-              ts: new Date().toISOString(),
-              valor: +valor,
-              img: imageThumb,
-              coords: null,
-              up: 0,
-              down: 0,
-              voters: {},
-              author: deviceId
-            });
-            renderFeed();
-            maybeJumpToBottom();
+            pushFeed({ type:'post', id: Date.now() + '_' + Math.random().toString(36).slice(2,7), ts: new Date().toISOString(), valor:+valor, img:imageThumb, coords:null, author: deviceId });
+            renderFeed(); maybeJumpToBottom();
 
             if (SYNC_TO_CLOUD) {
               try {
@@ -1132,13 +957,15 @@
     }
 
     // ===== Inicialização =====
+    setAppHeight();               // calcula altura do header
     setInterval(capturarImagemEProcessar, 1200);
-    iniciarCamera();       // tenta iniciar automaticamente
-    bindCameraAutostart(); // e também por gesto, se o browser exigir
+    iniciarCamera();              // tenta iniciar automaticamente
+    bindCameraAutostart();        // fallback por gesto (iOS)
     loadState();
   </script>
 </body>
 </html>
+
 
 
 
