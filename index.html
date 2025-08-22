@@ -147,7 +147,7 @@
     .modal-title{ font-weight:700; letter-spacing:.3px }
     .modal-body{ overflow:auto; padding-top:10px; }
 
-    /* RODAPÉ DO CHAT AJUSTADO (sem toggle de localização) */
+    /* RODAPÉ DO CHAT (limpo) */
     .modal-foot{
       border-top:1px dashed var(--card-border);
       margin-top:10px; padding:10px;
@@ -264,7 +264,6 @@
       <div class="modal-head">
         <div class="modal-title" id="histTitle">Histórico de lançamentos</div>
         <div style="display:flex; gap:8px">
-          <button class="btn warn" onclick="limparHistorico()">🧹 Limpar histórico</button>
           <button class="btn" onclick="fecharHistorico()">✖ Fechar</button>
         </div>
       </div>
@@ -278,9 +277,8 @@
   <div id="feedModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="feedTitle">
     <div class="modal-card">
       <div class="modal-head">
-        <div class="modal-title" id="feedTitle">Chat (timeline de preços)</div>
+        <div class="modal-title" id="feedTitle"><!-- título removido --></div>
         <div style="display:flex; gap:8px">
-          <button class="btn warn" onclick="limparFeed()">🧹 Limpar chat</button>
           <button class="btn" onclick="fecharFeed()">✖ Fechar</button>
         </div>
       </div>
@@ -523,17 +521,7 @@
     }
     function fecharHistorico(){ document.getElementById('historicoModal').classList.remove('show'); pauseOCR(false); }
     document.getElementById('historicoModal').addEventListener('click', (e)=>{ if (e.target.id==='historicoModal') fecharHistorico(); });
-    document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') { fecharHistorico(); fecharFeed(); } });
-
-    function limparHistorico(){
-      if(!confirm('Limpar todo o histórico de lançamentos?')) return;
-      historico.length = 0;
-      localStorage.removeItem(LS_KEYS.historico);
-      const lista = document.getElementById('historicoLista');
-      if (lista){
-        lista.innerHTML = '<div class="hist-item"><span class="hist-val">Nenhum lançamento ainda</span><span class="hist-time">—</span></div>';
-      }
-    }
+    document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') { fecharHistorico(); fecharFeedInternal(); } });
 
     /* ===== OCR ===== */
     async function capturarImagemEProcessar() {
@@ -584,6 +572,7 @@
     /* ===== Chat/Feed ===== */
     const FEED_LIMIT = 200;
     let feed = []; // it: {type:'post'|'msg', ...}
+    let feedOpen = false; // controla estado para o botão voltar
 
     function loadFeed(){
       try {
@@ -636,6 +625,18 @@
       return (el.scrollHeight - el.scrollTop - el.clientHeight) < 40;
     }
 
+    function jumpToBottom(){
+      const lista = document.getElementById('feedLista');
+      if (!lista) return;
+      // garante rolagem após layout e imagens pequenas
+      requestAnimationFrame(()=>{
+        lista.scrollTop = lista.scrollHeight;
+        requestAnimationFrame(()=>{
+          lista.scrollTop = lista.scrollHeight;
+        });
+      });
+    }
+
     async function abrirFeed(e){
       if (e) e.stopPropagation(); pauseOCR(true);
 
@@ -666,21 +667,36 @@
 
       renderFeed();
       document.getElementById('feedModal').classList.add('show');
+      feedOpen = true;
+
+      // empilha estado para o botão de voltar fechar o modal
+      history.pushState({feed:true}, '');
 
       // NÃO focar o input aqui (para não abrir o teclado)
-      // const ci = document.getElementById('chatInput');
-      // if (ci) { ci.addEventListener('keydown', onChatKey); } // opcional
 
       // ao abrir, colar no fim (mensagem mais recente visível)
-      const lista = document.getElementById('feedLista');
-      if (lista) lista.scrollTop = lista.scrollHeight;
+      jumpToBottom();
     }
+
+    // fechar via UI: usa history.back para disparar popstate
     function fecharFeed(){
-      document.getElementById('feedModal').classList.remove('show'); pauseOCR(false);
-      // remover listeners se tiver adicionado
-      // const ci = document.getElementById('chatInput');
-      // if (ci) ci.removeEventListener('keydown', onChatKey);
+      if (feedOpen) history.back();
     }
+    // fechar internal sem mexer no histórico
+    function fecharFeedInternal(){
+      const modal = document.getElementById('feedModal');
+      if (modal) modal.classList.remove('show');
+      feedOpen = false;
+      pauseOCR(false);
+    }
+
+    // botão voltar do telefone / navegador
+    window.addEventListener('popstate', (e)=>{
+      if (feedOpen){
+        fecharFeedInternal();
+      }
+    });
+
     function onChatKey(e){ if (e.key === 'Enter') enviarMensagem(); }
 
     function renderFeed(){
@@ -689,13 +705,13 @@
 
       if (lista) lista.innerHTML = '';
 
-      // ORDEM ASCENDENTE: antigos → novos
+      // ORDEM ASCENDENTE: antigos → novos (novos no fundo)
       const items = [...feed].sort((a,b)=> new Date(a.ts) - new Date(b.ts));
 
       if (!items.length){
         const empty = document.createElement('div');
         empty.className = 'hist-item';
-        empty.textContent = 'Seu chat está vazio. Envie uma mensagem ou poste uma foto abaixo.';
+        empty.textContent = 'Envie uma mensagem ou poste uma foto abaixo.';
         lista.appendChild(empty);
       } else {
         items.forEach(p=>{
@@ -734,10 +750,10 @@
             img.alt = p.valor ? `Preço: R$ ${Number(p.valor).toFixed(2)}` : 'Foto enviada';
             img.loading = 'lazy';
             img.decoding = 'async';
-            // evita pulo de rolagem quando a imagem termina de carregar
+            // se o usuário está no fim, mantemos colado ao terminar de carregar
             img.onload = () => {
               const l = document.getElementById('feedLista');
-              if (isNearBottom(l)) l.scrollTop = l.scrollHeight;
+              if (isNearBottom(l)) jumpToBottom();
             };
 
             const body = document.createElement('div'); body.className = 'post-body';
@@ -802,7 +818,7 @@
       }
 
       // cola no fim somente se usuário já estava perto do fim
-      if (stick && lista) lista.scrollTop = lista.scrollHeight;
+      if (stick && lista) jumpToBottom();
     }
 
     function sharePost(p){
@@ -833,7 +849,7 @@
     function enviarMensagem(){
       const input = document.getElementById('chatInput');
       let text = (input.value || '').trim();
-      if (!text) { input.blur(); return; } // não abre teclado; só se digitar
+      if (!text) { input.blur(); return; } // teclado só se digitar
 
       const id = Date.now() + '_' + Math.random().toString(36).slice(2,7);
       const ts = new Date().toISOString();
@@ -841,6 +857,8 @@
       const add = (coords)=> {
         pushFeed({ type:'msg', id, ts, text, coords: coords || null, author: deviceId });
         renderFeed();
+        // após render, mostramos a mais recente
+        jumpToBottom();
         input.value = '';
         input.blur(); // fecha teclado depois de enviar
       };
@@ -895,6 +913,7 @@
             voters: {}
           });
           renderFeed();
+          jumpToBottom();
         };
 
         // geolocalização automática
@@ -956,14 +975,6 @@
       });
     }
 
-    /* ===== Limpar chat ===== */
-    function limparFeed(){
-      if (!confirm('Limpar todo o chat?')) return;
-      feed = [];
-      saveFeed();
-      renderFeed();
-    }
-
     /* ===== Captura foto + envia para chat (post) automática ao somar ===== */
     async function capturarEEnviarImagem(valor) {
       try {
@@ -995,6 +1006,7 @@
               voters: {}
             });
             renderFeed();
+            jumpToBottom();
 
             if (SYNC_TO_CLOUD) {
               try {
@@ -1018,6 +1030,7 @@
               voters: {}
             });
             renderFeed();
+            jumpToBottom();
 
             if (SYNC_TO_CLOUD) {
               try {
@@ -1042,6 +1055,7 @@
   </script>
 </body>
 </html>
+
 
 
 
