@@ -35,6 +35,12 @@
   --err:#ff7a7a;
 
   --shadow: 0 10px 28px rgba(6,12,32,0.40), inset 0 1px rgba(255,255,255,0.05);
+
+  /* Larguras dos inputs (pedidos) */
+  --w-manual: 260px;       /* ~60% menor que span total */
+  --w-multval: 180px;      /* ~30% menor (mais compacto) */
+  --w-qty: 70px;           /* quantidade mais estreita */
+  --w-col-botoes: 120px;   /* coluna estreita de botões */
 }
 
 *{ box-sizing:border-box }
@@ -104,10 +110,10 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 .title{ font-size:13px; color:var(--muted); letter-spacing:.4px; text-transform:uppercase }
 
 /* ===== CABEÇALHO DA LATERAL =====
-   Título à esquerda e coluna de botões à direita, alinhados no topo */
+   Título + inputs à esquerda e COLUNA DE 7 BOTÕES à direita, alinhados no topo */
 .aside-head{
   display:grid;
-  grid-template-columns: 1fr 120px; /* coluna estreita de botões */
+  grid-template-columns: 1fr var(--w-col-botoes); /* coluna estreita de botões */
   align-items:start;
   gap:12px;
 }
@@ -115,13 +121,41 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   .aside-head{ grid-template-columns: 1fr; }
 }
 
+/* Bloco à esquerda (título + inputs) */
+.aside-left{ display:flex; flex-direction:column; gap:8px; }
+
+/* Linha do topo: deixar o "Valor unitário" já no alto.
+   Ele fica visualmente "ao lado" do Adicionar porque os botões estão na coluna à direita */
+.manual-row{
+  display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+}
+
+/* Campos */
+.input{
+  border:1px solid var(--card-border); background: rgba(10,14,32,0.55);
+  color:var(--text); padding: 10px 12px; border-radius:12px; outline:none;
+  transition: border-color .12s ease, box-shadow .12s ease, background .12s ease;
+}
+.input:focus-visible{
+  border-color: rgba(127,180,255,0.65);
+  box-shadow: 0 0 0 3px rgba(127,180,255,0.18);
+  background: rgba(10,14,32,0.65);
+}
+
+/* >>> Ajustes de tamanho solicitados */
+#manualInput{ width: var(--w-manual); }         /* 60% menor */
+#multValueInput{ width: var(--w-multval); }     /* 30% menor */
+#qtyInput{ width: var(--w-qty); text-align:center; }
+
+/* Pilha vertical de multiplicação embaixo do manual */
+.mult-stack{ display:flex; flex-direction:column; gap:8px; }
+
 /* Coluna de botões (topo, 7 itens) */
 .controls-buttons{
   display:flex; flex-direction:column; gap:8px;
   align-items:stretch;
-  width:120px;           /* largura estreita */
+  width:var(--w-col-botoes);
   justify-self:end;      /* encosta na lateral direita */
-  margin-top:0;          /* colado ao topo, alinhado ao título */
 }
 .controls-buttons .btn{
   width:100%;
@@ -147,21 +181,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 }
 .preco-btn:hover{ transform: translateY(-1px); box-shadow: 0 12px 26px rgba(7,20,12,0.45); filter: brightness(1.03); }
 .preco-btn.pulse{ transform: scale(1.04) }
-
-/* Inputs manuais e multiplicação (abaixo das sugestões) */
-.controls-left{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:12px; }
-.input{
-  border:1px solid var(--card-border); background: rgba(10,14,32,0.55);
-  color:var(--text); padding: 10px 12px; border-radius:12px; outline:none;
-  transition: border-color .12s ease, box-shadow .12s ease, background .12s ease;
-}
-.input:focus-visible{
-  border-color: rgba(127,180,255,0.65);
-  box-shadow: 0 0 0 3px rgba(127,180,255,0.18);
-  background: rgba(10,14,32,0.65);
-}
-.input-qty{ width:92px; text-align:center; }
-.mult-group{ display:flex; gap:8px; align-items:center; }
 
 /* Botões base + hierarquia */
 .btn{
@@ -298,12 +317,28 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
     <aside class="card stack">
       <!-- Cabeçalho: título + COLUNA DE 7 BOTÕES colada no topo -->
       <div class="aside-head">
-        <div class="title">Sugestões de preço</div>
+        <div class="aside-left">
+          <div class="title">Sugestões de preço</div>
+
+          <!-- Linha de topo com Valor unitário (menor e no alto) -->
+          <div class="manual-row">
+            <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor unitário (ex: 0.77)">
+          </div>
+
+          <!-- Pilha vertical dos campos de multiplicação -->
+          <div class="mult-stack">
+            <input id="multValueInput" class="input" type="number" step="0.01" placeholder="Valor da multiplicação" readonly>
+            <div class="manual-row">
+              <input id="qtyInput" class="input" type="number" step="1" min="1" value="2" placeholder="Qtd.">
+              <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
+            </div>
+          </div>
+        </div>
 
         <div class="controls-buttons">
           <button class="btn ok"   onclick="adicionarManual()">➕ Adicionar</button>
           <button class="btn warn" onclick="diminuirManual()">➖ Subtrair</button>
-          <button class="btn err"  onclick="limparSugestoes()">❌ Apagar sugestões</button>
+          <button class="btn err"  onclick="limparSugestoes()">❌ Apagar</button>
           <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer último</button>
           <button class="btn err"  onclick="zerarTotal()">🧹 Zerar Total</button>
           <button class="btn"      onclick="abrirHistorico(event)">📜 Histórico</button>
@@ -313,15 +348,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 
       <!-- Lista de preços OCR -->
       <div id="precos"></div>
-
-      <!-- Inputs manuais abaixo das sugestões -->
-      <div class="controls-left">
-        <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor unitário (ex: 0.77)">
-        <div class="mult-group">
-          <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
-          <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
-        </div>
-      </div>
 
       <div id="total">
         <span>Total</span>
@@ -567,8 +593,10 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
     }
 
     function multiplicarManual(){
-      const input = document.getElementById('manualInput');
-      const qtyEl = document.getElementById('qtyInput');
+      const input = document.getElementById('manualInput');      // valor unitário
+      const multOut = document.getElementById('multValueInput'); // novo campo (resultado)
+      const qtyEl = document.getElementById('qtyInput');         // quantidade
+
       let valor = parseFloat((input.value || '').replace(',', '.'));
       let qtd = parseInt(qtyEl.value, 10);
 
@@ -582,12 +610,18 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
         qtyEl.focus();
         return;
       }
+
       const resultado = valor * qtd;
+
+      // Preenche o novo campo de resultado
+      multOut.value = resultado.toFixed(2);
+
+      // Mantém comportamento anterior: também joga o resultado no manual (pra somar)
       input.value = resultado.toFixed(2);
 
       // feedback leve
-      input.style.transform = 'scale(1.02)';
-      setTimeout(()=>{ input.style.transform = 'scale(1)'; }, 120);
+      multOut.style.transform = 'scale(1.02)';
+      setTimeout(()=>{ multOut.style.transform = 'scale(1)'; }, 120);
     }
 
     function adicionarManual() {
@@ -599,7 +633,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       limparSugestoes(); sugestoesFixas = false; bip.play();
       registrar('add', valor);
       saveState();
-      input.value=''; input.blur();
+      input.blur();
     }
 
     function diminuirManual() {
@@ -612,7 +646,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       limparSugestoes(); sugestoesFixas = false; bip.play();
       registrar('sub', valor);
       saveState();
-      input.value=''; input.blur();
+      input.blur();
     }
 
     function zerarTotal() {
@@ -623,6 +657,10 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       localStorage.removeItem(LS_KEYS.valores);
       localStorage.removeItem(LS_KEYS.historico);
       saveFeed(); // não apaga o chat
+      // limpa campos
+      document.getElementById('manualInput').value = '';
+      document.getElementById('multValueInput').value = '';
+      document.getElementById('qtyInput').value = 2;
     }
 
     function desfazerUltimo() {
