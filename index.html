@@ -73,6 +73,7 @@
       position: relative; border-radius: 14px; overflow: hidden;
       border: 1px solid var(--card-border); background: rgba(0,0,0,0.35);
       aspect-ratio: 16/9; box-shadow: var(--shadow);
+      cursor: pointer; /* para indicar toque para iniciar no iOS */
     }
     @media (max-width:980px){ .videoWrap{ aspect-ratio:auto; height:56vh } }
     video{ width:100%; height:100%; object-fit:cover; display:block; }
@@ -222,14 +223,14 @@
   <main>
     <!-- Esquerda: câmera + HUD -->
     <section class="card stack">
-      <div class="videoWrap">
+      <div class="videoWrap" title="Toque para iniciar a câmera se necessário">
         <video id="video" autoplay playsinline muted></video>
         <canvas id="overlay"></canvas>
         <div class="hud">
           <span class="tag">Mire a etiqueta dentro do retângulo (50% × 20%)</span>
         </div>
       </div>
-      <div class="tip">A leitura ocorre automaticamente ~a cada 1,2s. Use a câmera traseira e mantenha a etiqueta bem enquadrada.</div>
+      <div class="tip">A leitura ocorre automaticamente ~a cada 1,2s. Use a câmera traseira e mantenha a etiqueta bem enquadrada. Toque na área da câmera se ela não iniciar automaticamente.</div>
     </section>
 
     <!-- Direita: sugestões + controles + total -->
@@ -407,25 +408,87 @@
     function pauseOCR(v){ ocrPaused = !!v; }
     document.addEventListener('visibilitychange', ()=>{ pauseOCR(document.hidden); });
 
-    /* ===== Câmera com fallback ===== */
-    async function iniciarCamera() {
-      const modos = [
-        { video: { facingMode: { exact: 'environment' } }, audio: false },
-        { video: { facingMode: { ideal: 'environment' } }, audio: false },
-        { video: true, audio: false }
-      ];
-      let ok = false, lastErr = null;
-      for (const opt of modos) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia(opt);
-          video.srcObject = stream;
-          video.onloadedmetadata = () => { syncOverlayToVideo(); desenharROI(); };
-          window.addEventListener('resize', syncOverlayToVideo);
-          window.addEventListener('orientationchange', syncOverlayToVideo);
-          ok = true; break;
-        } catch (e) { lastErr = e; }
-      }
-      if (!ok) alert("Erro ao acessar a câmera: " + (lastErr && lastErr.message ? lastErr.message : lastErr));
+    /* ===== Câmera com fallback (traseira prioritária) ===== */
+    let currentStream = null;
+
+    async function startWithConstraints(constraints){
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      if (currentStream){ currentStream.getTracks().forEach(t => t.stop()); }
+      currentStream = stream;
+      video.srcObject = stream;
+      video.onloadedmetadata = () => { syncOverlayToVideo(); desenharROI(); };
+      window.addEventListener('resize', syncOverlayToVideo);
+      window.addEventListener('orientationchange', syncOverlayToVideo);
+      return stream;
+    }
+
+    function looksLikeBackLabel(label){
+      return /back|trás|traseira|rear|environment|wide|ultra/i.test(label || '');
+    }
+
+    async function trySwitchToRearByDeviceId(){
+      try{
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videos = devices.filter(d => d.kind === 'videoinput');
+        // tenta por label primeiro
+        let candidate = videos.find(d => looksLikeBackLabel(d.label));
+        // senão, muitas vezes a traseira é a última
+        if (!candidate && videos.length) candidate = videos[videos.length - 1];
+        if (candidate){
+          // se já estamos nela, sai
+          const track = currentStream && currentStream.getVideoTracks()[0];
+          const settings = track ? track.getSettings() : {};
+          if (settings && settings.deviceId === candidate.deviceId) return;
+          await startWithConstraints({ video: { deviceId: { exact: candidate.deviceId } }, audio:false });
+        }
+      }catch(e){ /* ignora troca se falhar */ }
+    }
+
+    async function iniciarCamera(){
+      let lastErr;
+
+      // 1) tenta direto a traseira via facingMode (exato)
+      try{
+        await startWithConstraints({ video: { facingMode: { exact: 'environment' } }, audio:false });
+        // ainda assim, alguns aparelhos dão frontal: tenta troca por deviceId após permissão
+        await trySwitchToRearByDeviceId();
+        return;
+      }catch(e){ lastErr = e; }
+
+      // 2) ideal environment
+      try{
+        await startWithConstraints({ video: { facingMode: { ideal: 'environment' } }, audio:false });
+        await trySwitchToRearByDeviceId();
+        return;
+      }catch(e){ lastErr = e; }
+
+      // 3) genérico (para liberar labels) e depois troca para traseira por deviceId
+      try{
+        await startWithConstraints({ video: true, audio:false });
+        await trySwitchToRearByDeviceId();
+        return;
+      }catch(e){ lastErr = e; }
+
+      // 4) último recurso
+      try{
+        await startWithConstraints({ video: true, audio:false });
+        return;
+      }catch(e){ lastErr = e; }
+
+      alert("Não foi possível iniciar a câmera: " + (lastErr && lastErr.message ? lastErr.message : lastErr));
+    }
+
+    // Alguns browsers (ex: Safari iOS) exigem gesto do usuário
+    function bindCameraAutostart(){
+      const wrap = document.querySelector('.videoWrap');
+      if (!wrap) return;
+      const handler = () => {
+        if (!video.srcObject) iniciarCamera();
+        wrap.removeEventListener('click', handler);
+        wrap.removeEventListener('touchstart', handler);
+      };
+      wrap.addEventListener('click', handler, { once:true });
+      wrap.addEventListener('touchstart', handler, { once:true, passive:true });
     }
 
     /* ===== Somatório ===== */
@@ -619,7 +682,6 @@
       renderFeed();
     }
 
-    // util: checar se o usuário está perto do fim antes de re-render
     function isNearBottom(el){
       if (!el) return true;
       return (el.scrollHeight - el.scrollTop - el.clientHeight) < 40;
@@ -628,7 +690,6 @@
     function jumpToBottom(){
       const lista = document.getElementById('feedLista');
       if (!lista) return;
-      // garante rolagem após layout e imagens pequenas
       requestAnimationFrame(()=>{
         lista.scrollTop = lista.scrollHeight;
         requestAnimationFrame(()=>{
@@ -640,7 +701,6 @@
     async function abrirFeed(e){
       if (e) e.stopPropagation(); pauseOCR(true);
 
-      // Atualiza posts da nuvem (se habilitar sync)
       if (SYNC_TO_CLOUD) {
         try {
           const res = await fetch(`${API_BASE}/api/feed?deviceId=${encodeURIComponent(deviceId)}`);
@@ -657,7 +717,7 @@
               down: p.down || 0,
               voters: p.voters || {}
             }));
-            const msgs = feed.filter(it => it.type === 'msg'); // preserva mensagens locais
+            const msgs = feed.filter(it => it.type === 'msg');
             feed = [...newPosts, ...msgs].sort((a,b)=> new Date(b.ts) - new Date(a.ts));
             if (feed.length > FEED_LIMIT) feed.length = FEED_LIMIT;
             saveFeed();
@@ -668,29 +728,21 @@
       renderFeed();
       document.getElementById('feedModal').classList.add('show');
       feedOpen = true;
-
-      // empilha estado para o botão de voltar fechar o modal
       history.pushState({feed:true}, '');
 
-      // NÃO focar o input aqui (para não abrir o teclado)
-
-      // ao abrir, colar no fim (mensagem mais recente visível)
+      // ao abrir, colar no fim (mensagem mais recente)
       jumpToBottom();
     }
 
-    // fechar via UI: usa history.back para disparar popstate
     function fecharFeed(){
       if (feedOpen) history.back();
     }
-    // fechar internal sem mexer no histórico
     function fecharFeedInternal(){
       const modal = document.getElementById('feedModal');
       if (modal) modal.classList.remove('show');
       feedOpen = false;
       pauseOCR(false);
     }
-
-    // botão voltar do telefone / navegador
     window.addEventListener('popstate', (e)=>{
       if (feedOpen){
         fecharFeedInternal();
@@ -740,7 +792,7 @@
             card.appendChild(meta);
             card.appendChild(actions);
             lista.appendChild(card);
-          } else { // post (foto [+ preço opcional])
+          } else {
             normalizePost(p);
 
             const card = document.createElement('div'); card.className = 'post';
@@ -750,7 +802,6 @@
             img.alt = p.valor ? `Preço: R$ ${Number(p.valor).toFixed(2)}` : 'Foto enviada';
             img.loading = 'lazy';
             img.decoding = 'async';
-            // se o usuário está no fim, mantemos colado ao terminar de carregar
             img.onload = () => {
               const l = document.getElementById('feedLista');
               if (isNearBottom(l)) jumpToBottom();
@@ -773,7 +824,6 @@
 
             const actions = document.createElement('div'); actions.className='actions';
 
-            // Ações existentes
             const btnMap = document.createElement('button'); btnMap.className='btn-ghost'; btnMap.textContent='📍 Rota';
             if (p.coords){ btnMap.onclick = ()=> window.open(mapsRoute(p.coords.lat, p.coords.lng), '_blank'); }
             else { btnMap.disabled = true; }
@@ -817,7 +867,6 @@
         });
       }
 
-      // cola no fim somente se usuário já estava perto do fim
       if (stick && lista) jumpToBottom();
     }
 
@@ -857,13 +906,11 @@
       const add = (coords)=> {
         pushFeed({ type:'msg', id, ts, text, coords: coords || null, author: deviceId });
         renderFeed();
-        // após render, mostramos a mais recente
         jumpToBottom();
         input.value = '';
-        input.blur(); // fecha teclado depois de enviar
+        input.blur();
       };
 
-      // geolocalização automática
       if (navigator.geolocation){
         navigator.geolocation.getCurrentPosition(
           pos => add({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
@@ -877,7 +924,7 @@
     function abrirPickerFoto(){
       const input = document.getElementById('photoInput');
       if (!input) return;
-      input.value = ''; // reset para permitir mesma foto novamente
+      input.value = '';
       input.click();
     }
 
@@ -890,9 +937,8 @@
     async function handleFotoSelecionada(file){
       try{
         const imgDataUrl = await fileToDataURL(file);
-        const compressed = await compressImage(imgDataUrl, 1280); // largura máx 1280
+        const compressed = await compressImage(imgDataUrl, 1280);
 
-        // Preço opcional
         let priceRaw = prompt('Preço (opcional): ex. 10.50');
         let valor = null;
         if (priceRaw !== null){
@@ -916,7 +962,6 @@
           jumpToBottom();
         };
 
-        // geolocalização automática
         if (navigator.geolocation){
           navigator.geolocation.getCurrentPosition(
             pos => postNow({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
@@ -967,10 +1012,10 @@
           c.width = w; c.height = h;
           const ctx = c.getContext('2d');
           ctx.drawImage(img, 0, 0, w, h);
-          const out = c.toDataURL('image/jpeg', 0.7); // qualidade 0.7
+          const out = c.toDataURL('image/jpeg', 0.7);
           resolve(out);
         };
-        img.onerror = ()=> resolve(dataUrl); // fallback: sem compressão
+        img.onerror = ()=> resolve(dataUrl);
         img.src = dataUrl;
       });
     }
@@ -1050,7 +1095,8 @@
 
     // ===== Inicialização =====
     setInterval(capturarImagemEProcessar, 1200);
-    iniciarCamera();
+    iniciarCamera();       // tenta iniciar automaticamente
+    bindCameraAutostart(); // e também por gesto, se o browser exigir
     loadState();
   </script>
 </body>
