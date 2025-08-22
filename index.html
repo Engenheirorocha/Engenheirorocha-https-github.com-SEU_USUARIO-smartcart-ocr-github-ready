@@ -73,7 +73,7 @@
       position: relative; border-radius: 14px; overflow: hidden;
       border: 1px solid var(--card-border); background: rgba(0,0,0,0.35);
       aspect-ratio: 16/9; box-shadow: var(--shadow);
-      cursor: pointer; /* indica toque pra iniciar no iOS se necessário */
+      cursor: pointer; /* toque para iniciar no iOS, se precisar */
     }
     @media (max-width:980px){ .videoWrap{ aspect-ratio:auto; height:56vh } }
     video{ width:100%; height:100%; object-fit:cover; display:block; }
@@ -107,6 +107,8 @@
       color:var(--text); padding: 10px 12px; border-radius:12px; outline:none;
     }
     .input-qty{ width:92px; text-align:center; }
+    .mult-group{ display:flex; gap:8px; align-items:center; }
+
     .btn{
       border:1px solid var(--card-border); background: rgba(8,12,28,0.6);
       color:var(--text); padding:10px 12px; border-radius:12px; cursor:pointer;
@@ -194,7 +196,7 @@
     }
     .btn-ghost[disabled]{ opacity:.5; cursor:not-allowed }
 
-    /* Mensagens de texto no chat (layout antigo mantido) */
+    /* Mensagens de texto no chat (feed) */
     .msg{
       border:1px solid var(--card-border); border-radius:14px; background: rgba(8,12,28,0.5);
       padding:10px 12px; display:flex; flex-direction:column; gap:6px;
@@ -240,15 +242,23 @@
       <div class="title">Sugestões de preço</div>
       <div id="precos"></div>
 
+      <!-- Linha 1: valor manual + grupo (Qtd + Multiplicar) -->
       <div class="row">
-        <input id="manualInput" class="input" type="number" step="0.01" placeholder="Digite o valor (ex: 10.50)">
-        <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" title="Quantidade">
-        <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
+        <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor unitário (ex: 0.77)">
+        <div class="mult-group">
+          <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
+          <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
+        </div>
+      </div>
+
+      <!-- Linha 2: ações principais -->
+      <div class="row">
         <button class="btn ok" onclick="adicionarManual()">➕ Adicionar</button>
         <button class="btn warn" onclick="diminuirManual()">➖ Subtrair</button>
         <button class="btn err" onclick="zerarTotal()">🧹 Zerar Total</button>
       </div>
 
+      <!-- Linha 3: utilidades -->
       <div class="row">
         <button class="btn err" onclick="limparSugestoes()">❌ Apagar sugestões</button>
         <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer último</button>
@@ -506,7 +516,7 @@
       let qtd = parseInt(qtyEl.value, 10);
 
       if (isNaN(valor) || valor <= 0){
-        alert('Digite primeiro um valor válido no campo manual.');
+        alert('Digite primeiro um valor unitário válido.');
         input.focus();
         return;
       }
@@ -779,7 +789,7 @@
     function renderFeed(){
       const lista = document.getElementById('feedLista');
       const scroller = getFeedScroller();
-      const stick = isNearBottom(scroller); // mede no container correto
+      const stick = isNearBottom(scroller);
 
       if (lista) lista.innerHTML = '';
 
@@ -856,8 +866,8 @@
             btnShare.onclick = ()=> sharePost(p);
             actions.appendChild(btnMap); actions.appendChild(btnShare);
 
-            // --- VOTOS (👍 / 👎) ---
-            const userVote = p.voters && p.voters[deviceId]; // 'up' | 'down' | undefined
+            // --- VOTOS ---
+            const userVote = p.voters && p.voters[deviceId];
             const voteWrap = document.createElement('div');
             voteWrap.style.display = 'flex';
             voteWrap.style.alignItems = 'center';
@@ -892,7 +902,6 @@
         });
       }
 
-      // se estava colado no fim antes de renderizar, cola de novo no fim
       if (stick) jumpToBottom();
     }
 
@@ -932,7 +941,7 @@
       const add = (coords)=> {
         pushFeed({ type:'msg', id, ts, text, coords: coords || null, author: deviceId });
         renderFeed();
-        maybeJumpToBottom(); // só cola no fim se o usuário já estava no fim
+        maybeJumpToBottom();
         input.value = '';
         input.blur();
       };
@@ -1130,6 +1139,7 @@
   </script>
 </body>
 </html>
+
 
 
 
