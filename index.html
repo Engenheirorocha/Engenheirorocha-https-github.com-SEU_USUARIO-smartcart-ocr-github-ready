@@ -231,25 +231,22 @@
       <div class="title">Sugestões de preço</div>
       <div id="precos"></div>
 
-      <!-- FORM do valor manual -->
-      <form id="manualForm" novalidate onsubmit="return false;">
-        <!-- Linha 1: valor manual + grupo (Qtd + Multiplicar) -->
-        <div class="row">
-          <input id="manualInput" class="input" type="number" step="0.01" inputmode="decimal" autocomplete="off"
-                 placeholder="Valor unitário (ex: 0,77)" enterkeyhint="go">
-          <div class="mult-group">
-            <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
-            <button class="btn" type="button" onclick="multiplicarManual()">× Multiplicar</button>
-          </div>
+      <!-- Linha 1: valor manual + grupo (Qtd + Multiplicar) -->
+      <div class="row">
+        <input id="manualInput" class="input" type="number" step="0.01" inputmode="decimal" autocomplete="off"
+               placeholder="Valor unitário (ex: 0,77)">
+        <div class="mult-group">
+          <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
+          <button class="btn" type="button" onclick="multiplicarManual()">× Multiplicar</button>
         </div>
+      </div>
 
-        <!-- Linha 2: ações principais -->
-        <div class="row">
-          <button class="btn ok" type="submit" id="addSubmit">➕ Adicionar</button>
-          <button class="btn warn" type="button" onclick="subtrairManual()">➖ Subtrair</button>
-          <button class="btn err" type="button" onclick="zerarTotal()">🧹 Zerar Total</button>
-        </div>
-      </form>
+      <!-- Linha 2: ações principais -->
+      <div class="row">
+        <button class="btn ok" type="button" onclick="adicionarManual()">➕ Adicionar</button>
+        <button class="btn warn" type="button" onclick="subtrairManual()">➖ Subtrair</button>
+        <button class="btn err" type="button" onclick="zerarTotal()">🧹 Zerar Total</button>
+      </div>
 
       <!-- Linha 3: utilidades -->
       <div class="row">
@@ -570,7 +567,7 @@
         historico.forEach(item => {
           const row = document.createElement('div');
           row.className = 'hist-item';
-          const tipoPill = `<span class="pill ${item.tipo === 'add' ? 'add' : 'sub'}">${item.tipo === 'add' ? 'Adicionar' : 'Diminuir'}</span>`;
+          const tipoPill = `<span class="pill ${item.tipo === 'add' ? 'add' : 'sub'}">${item.tipo === 'add' ? 'Adicionar' : 'Subtrair'}</span>`;
           const valorFmt = (item.tipo === 'add' ? '+' : '-') + ' R$ ' + item.valor.toFixed(2);
           const dateFmt = item.data instanceof Date ? item.data.toLocaleString('pt-BR') : new Date(item.data).toLocaleString('pt-BR');
           row.innerHTML = `
@@ -999,27 +996,15 @@
       } catch (e) { console.warn('snapshot/geo erro:', e); }
     }
 
-    /* ===== ENTER do teclado no form manual ===== */
-    function bindManualFormSubmit(){
-      const form = document.getElementById('manualForm');
-      const addBtn = document.getElementById('addSubmit');
-      form.addEventListener('submit', (e)=>{
-        e.preventDefault();
-        adicionarManual();
-      });
-      // se o usuário tocar no botão, o submit também chama adicionarManual() via listener
-      if (addBtn) addBtn.addEventListener('click', (e)=>{ e.preventDefault(); adicionarManual(); });
-    }
-
     // ===== Inicialização =====
     setInterval(capturarImagemEProcessar, 1200);
     iniciarCamera();
     bindCameraAutostart();
     loadState();
-    bindManualFormSubmit();
   </script>
 </body>
 </html>
+
 
 
 
