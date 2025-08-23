@@ -190,14 +190,18 @@ input[type=number]{ -moz-appearance:textfield; }
 /* Grids das ações */
 .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
 
-/* Linha de atalhos (➕/➖) */
+/* Linha de atalhos agora com 3 colunas: [+] [Valor] [–] */
 .manual-actions{
   display:grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr 1.4fr 1fr;
   gap:10px;
+  align-items:stretch;
+}
+.manual-actions > *{
+  min-width:0;
 }
 
-/* Linha única com 5 itens – SEM QUEBRA */
+/* Linha única com 5 itens (permanece como está) */
 .actions-grid-5{
   display:grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -325,19 +329,20 @@ input[type=number]{ -moz-appearance:textfield; }
       <div class="title">Sugestões de preço</div>
       <div id="precos"></div>
 
-      <!-- Linha 1: atalhos ➕ / ➖ (usam o campo Valor da linha abaixo) -->
+      <!-- Linha 1: agora [+] [Valor] [–] -->
       <div class="manual-actions">
         <button class="btn ok" onclick="adicionarManual()" title="Somar valor">➕ Adicionar</button>
+        <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor (ex: 0.77)">
         <button class="btn warn" onclick="diminuirManual()" title="Subtrair valor">➖ Subtrair</button>
       </div>
 
-      <!-- Linha 2: tudo na mesma linha (espaços iguais) -->
+      <!-- Linha 2: permanece igual (pode ficar com 4 itens mesmo) -->
       <div class="actions-grid-5">
-        <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor (ex: 0.77)">
         <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
         <button class="btn" onclick="multiplicarManual()">× Mult.</button>
         <button class="btn err" onclick="zerarTotal()">🧹 Zerar</button>
         <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer</button>
+        <!-- coluna restante intencionalmente vazia para não mexer no restante -->
       </div>
 
       <!-- Linha 3: utilidades -->
