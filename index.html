@@ -14,29 +14,23 @@
   <style>
 /* =========================
    Smart Cart – UI Refresh
-   Paleta + Botões + Cards
    ========================= */
 
 :root{
-  /* Paleta */
   --bg:#141a32;
   --bg-grad:
     radial-gradient(1200px 600px at 10% 10%, #1b2550 0%, transparent 60%),
     radial-gradient(900px 500px at 90% 20%, #123046 0%, transparent 55%),
     radial-gradient(1100px 700px at 50% 120%, #1b1f3c 0%, #141a32 60%);
-
   --card: rgba(28,32,60,0.85);
   --card-border: rgba(124,140,200,0.20);
   --text:#eef2ff;
   --muted:#aeb7d4;
-  --accent:#7fb4ff;
   --ok:#34d399;
   --warn:#f5c56a;
   --err:#ff7a7a;
-
   --shadow: 0 10px 28px rgba(6,12,32,0.40), inset 0 1px rgba(255,255,255,0.05);
 
-  /* Compactação/altura mínima */
   --action-font: clamp(12px, 1.2vw, 14px);
   --action-pad-v: clamp(6px, 1vw, 8px);
   --action-pad-h: clamp(8px, 1.2vw, 10px);
@@ -59,7 +53,10 @@ header{
   background: linear-gradient(180deg, rgba(10,14,32,0.65), rgba(10,14,32,0.25));
   border-bottom: 1px solid var(--card-border);
 }
-.wrap{ max-width:1200px; margin:0 auto; padding:14px 18px; display:flex; justify-content:center; }
+.wrap{
+  max-width:1200px; margin:0 auto; padding:14px 18px;
+  display:flex; justify-content:center; position:relative;
+}
 .brand{ display:flex; align-items:center; gap:12px; }
 .logo{
   width:34px; height:34px; border-radius:10px;
@@ -69,6 +66,19 @@ header{
 }
 .logo svg{ width:20px; height:20px; stroke:#ffffff; }
 h1{ font-size:18px; font-weight:700; margin:0; letter-spacing:.2px }
+
+/* Botão histórico no cabeçalho (ícone, canto esquerdo) */
+.icon-btn{
+  position:absolute; left:12px; top:50%; transform:translateY(-50%);
+  border:1px solid var(--card-border);
+  background: linear-gradient(180deg, rgba(14,20,42,0.85), rgba(10,16,34,0.85));
+  color:var(--text);
+  padding:8px 10px; border-radius:10px; cursor:pointer;
+  box-shadow: 0 6px 16px rgba(6,12,32,0.25);
+  line-height:1; display:flex; align-items:center; justify-content:center;
+}
+.icon-btn:hover{ filter:brightness(1.03); transform:translateY(-50%) translateY(-1px); }
+.icon-btn:active{ filter:brightness(0.98); transform:translateY(-50%); }
 
 /* Layout principal */
 main{
@@ -136,8 +146,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   background: rgba(10,14,32,0.65);
 }
 .input-qty{ text-align:center; }
-
-/* Remover setas do number (opcional) */
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
 input[type=number]{ -moz-appearance:textfield; }
@@ -159,32 +167,15 @@ input[type=number]{ -moz-appearance:textfield; }
 
 .btn.ok{
   background: linear-gradient(180deg, rgba(22,56,42,0.95), rgba(18,44,34,0.95));
-  border-color: rgba(52,211,153,0.55);
-  color:#e8fff6;
+  border-color: rgba(52,211,153,0.55); color:#e8fff6;
 }
-.btn.ok:hover{
-  box-shadow: 0 10px 24px rgba(36,160,120,0.35), 0 0 0 1px rgba(52,211,153,0.35) inset;
-  border-color: rgba(52,211,153,0.75);
-}
-
 .btn.warn{
   background: linear-gradient(180deg, rgba(58,46,20,0.95), rgba(42,32,14,0.95));
-  border-color: rgba(245,197,106,0.55);
-  color:#fff3da;
+  border-color: rgba(245,197,106,0.55); color:#fff3da;
 }
-.btn.warn:hover{
-  box-shadow: 0 10px 24px rgba(210,165,75,0.35), 0 0 0 1px rgba(245,197,106,0.35) inset;
-  border-color: rgba(245,197,106,0.75);
-}
-
 .btn.err{
   background: linear-gradient(180deg, rgba(64,28,28,0.96), rgba(40,18,18,0.96));
-  border-color: rgba(255,122,122,0.55);
-  color:#ffecec;
-}
-.btn.err:hover{
-  box-shadow: 0 10px 24px rgba(160,70,70,0.35), 0 0 0 1px rgba(255,122,122,0.35) inset;
-  border-color: rgba(255,122,122,0.75);
+  border-color: rgba(255,122,122,0.55); color:#ffecec;
 }
 
 /* Grids/linhas */
@@ -199,8 +190,8 @@ input[type=number]{ -moz-appearance:textfield; }
 }
 .manual-actions > *{ min-width:0; }
 
-/* Linha 2: Qtd / Mult / Zerar / Desfazer / (vazio)
-   — AQUI o ajuste proporcional: 3ª e 4ª colunas com 1.2fr */
+/* Linha 2: Qtd / × Mult. / 🧹 Zerar / ↩️ Desfazer / (espaço)
+   — Zerar e Desfazer com 1.2fr (maiores) */
 .actions-grid-5{
   display:grid;
   grid-template-columns: 1fr 1fr 1.2fr 1.2fr 0.0001fr;
@@ -208,9 +199,7 @@ input[type=number]{ -moz-appearance:textfield; }
   align-items:stretch;
 }
 .actions-grid-5 > *{
-  min-width:0;
-  width:100%;
-  height:100%;
+  min-width:0; width:100%; height:100%;
   font-size: var(--action-font);
   padding: var(--action-pad-v) var(--action-pad-h);
 }
@@ -295,6 +284,10 @@ input[type=number]{ -moz-appearance:textfield; }
   <!-- Header -->
   <header>
     <div class="wrap">
+      <!-- Ícone do Histórico (esquerda) -->
+      <button class="icon-btn" onclick="abrirHistorico(event)" title="Histórico">📜</button>
+
+      <!-- Marca central -->
       <div class="brand">
         <div class="logo" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -335,18 +328,17 @@ input[type=number]{ -moz-appearance:textfield; }
         <button class="btn warn" onclick="diminuirManual()" title="Subtrair valor">➖ Subtrair</button>
       </div>
 
-      <!-- Linha 2: Qtd / × Mult. / 🧹 Zerar / ↩️ Desfazer / (vazio para manter layout) -->
+      <!-- Linha 2: Qtd / × Mult. / 🧹 Zerar / ↩️ Desfazer / (vazio) -->
       <div class="actions-grid-5">
         <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
         <button class="btn" onclick="multiplicarManual()">× Mult.</button>
         <button class="btn err" onclick="zerarTotal()">🧹 Zerar</button>
         <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer</button>
-        <!-- intencionalmente vazio -->
+        <!-- vazio para balancear o grid -->
       </div>
 
-      <!-- Linha 3: utilidades -->
+      <!-- Linha 3: utilidades (Histórico REMOVIDO daqui) -->
       <div class="row">
-        <button class="btn" onclick="abrirHistorico(event)">📜 Histórico</button>
         <button class="btn" onclick="abrirFeed(event)">💬 Chat</button>
       </div>
 
@@ -616,7 +608,6 @@ input[type=number]{ -moz-appearance:textfield; }
       const resultado = valor * qtd;
       input.value = resultado.toFixed(2);
 
-      // feedback leve
       input.style.transform = 'scale(1.02)';
       setTimeout(()=>{ input.style.transform = 'scale(1)'; }, 120);
     }
@@ -770,9 +761,7 @@ input[type=number]{ -moz-appearance:textfield; }
         if (Array.isArray(f)) feed = f;
       } catch { feed = []; }
     }
-    function saveFeed(){
-      localStorage.setItem(LS_KEYS.feed, JSON.stringify(feed));
-    }
+    function saveFeed(){ localStorage.setItem(LS_KEYS.feed, JSON.stringify(feed)); }
     function pushFeed(item){
       feed.unshift(item);
       if (feed.length > FEED_LIMIT) feed.length = FEED_LIMIT;
@@ -787,7 +776,7 @@ input[type=number]{ -moz-appearance:textfield; }
       return p;
     }
 
-    function votar(postId, tipo){ // 'up' | 'down'
+    function votar(postId, tipo){
       const idx = feed.findIndex(it => it.type === 'post' && it.id === postId);
       if (idx === -1) return;
       const p = normalizePost(feed[idx]);
