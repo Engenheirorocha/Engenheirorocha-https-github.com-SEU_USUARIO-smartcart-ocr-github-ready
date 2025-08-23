@@ -249,10 +249,14 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 .msg-text{ white-space:pre-wrap; }
 .msg-meta{ font-size:12px; color:var(--muted); display:flex; gap:10px; align-items:center; }
 
-/* ===== Ajuste específico pedido: input entre ➕ e ➖ ===== */
+/* ===== Ajuste: input manual entre ➕ e ➖ ===== */
 .manual-group{ display:flex; align-items:center; gap:8px; width:100%; }
 .manual-group .input{ flex:1; text-align:center; }
 .manual-btn{ flex:0 0 54px; padding:10px; font-size:1.1em; font-weight:bold; }
+
+/* ===== Linha de ações iguais (Multiplicar, Zerar, Desfazer) ===== */
+.actions-equal{ display:flex; gap:10px; align-items:center; }
+.actions-equal .btn{ flex:1; min-width:0; } /* cada botão ocupa espaço igual */
   </style>
 </head>
 <body>
@@ -299,17 +303,19 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
         <button class="btn warn manual-btn" onclick="diminuirManual()" title="Subtrair valor">➖</button>
       </div>
 
-      <!-- Linha 2: grupo (Qtd + Multiplicar + Zerar) -->
-      <div class="row">
+      <!-- Linha 2: Qtd + [ Multiplicar | Zerar | Desfazer ] com espaço igual -->
+      <div class="row" style="align-items:stretch">
         <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
-        <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
-        <button class="btn err" onclick="zerarTotal()">🧹 Zerar</button>
+        <div class="actions-equal" style="flex:1">
+          <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
+          <button class="btn err" onclick="zerarTotal()">🧹 Zerar</button>
+          <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer</button>
+        </div>
       </div>
 
       <!-- Linha 3: utilidades/ações -->
       <div class="row">
         <button class="btn err" onclick="limparSugestoes()">❌ Apagar sugestões</button>
-        <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer último</button>
         <button class="btn" onclick="abrirHistorico(event)">📜 Histórico</button>
         <button class="btn" onclick="abrirFeed(event)">💬 Chat</button>
       </div>
