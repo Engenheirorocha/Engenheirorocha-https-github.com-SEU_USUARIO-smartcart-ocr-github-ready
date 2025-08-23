@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Smart Cart</title>
 
   <!-- OCR -->
@@ -67,7 +67,7 @@ header{
 .logo svg{ width:20px; height:20px; stroke:#ffffff; }
 h1{ font-size:18px; font-weight:700; margin:0; letter-spacing:.2px }
 
-/* Botão histórico no cabeçalho (ícone, canto esquerdo) */
+/* Botão histórico (ícone, canto esquerdo) */
 .icon-btn{
   position:absolute; left:12px; top:50%; transform:translateY(-50%);
   border:1px solid var(--card-border);
@@ -77,7 +77,7 @@ h1{ font-size:18px; font-weight:700; margin:0; letter-spacing:.2px }
   box-shadow: 0 6px 16px rgba(6,12,32,0.25);
   line-height:1; display:flex; align-items:center; justify-content:center;
 }
-.icon-btn:hover{ filter:brightness(1.03); transform:translateY(-50%) translateY(-1px); }
+.icon-btn:hover{ filter:brightness(1.03); transform:translateY(calc(-50% - 1px)); }
 .icon-btn:active{ filter:brightness(0.98); transform:translateY(-50%); }
 
 /* Layout principal */
@@ -103,11 +103,24 @@ main{
   position: relative; border-radius: 14px; overflow: hidden;
   border: 1px solid var(--card-border); background: rgba(0,0,0,0.28);
   aspect-ratio: 16/9; box-shadow: var(--shadow);
-  cursor: pointer;
 }
 @media (max-width:980px){ .videoWrap{ aspect-ratio:auto; height:56vh } }
 video{ width:100%; height:100%; object-fit:cover; display:block; }
 #overlay{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+
+/* Botão iniciar câmera (overlay) */
+#startCamBtn{
+  position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+  background: linear-gradient(180deg, rgba(10,14,32,0.55), rgba(10,14,32,0.35));
+  backdrop-filter: blur(6px);
+}
+#startCamBtn button{
+  border:1px solid var(--card-border);
+  background: linear-gradient(180deg, rgba(22,56,42,0.95), rgba(18,44,34,0.95));
+  color:#e8fff6; padding:12px 16px; border-radius:14px; cursor:pointer;
+  box-shadow: 0 10px 24px rgba(36,160,120,0.35);
+  font-weight:700; font-size:16px;
+}
 
 /* HUD */
 .hud{ position:absolute; left:10px; bottom:10px; display:flex; gap:8px; flex-wrap:wrap; }
@@ -165,18 +178,9 @@ input[type=number]{ -moz-appearance:textfield; }
 .btn:active{ transform: translateY(0); filter: brightness(0.98); }
 .btn:focus-visible{ outline:none; box-shadow: 0 0 0 3px rgba(127,180,255,0.25); }
 
-.btn.ok{
-  background: linear-gradient(180deg, rgba(22,56,42,0.95), rgba(18,44,34,0.95));
-  border-color: rgba(52,211,153,0.55); color:#e8fff6;
-}
-.btn.warn{
-  background: linear-gradient(180deg, rgba(58,46,20,0.95), rgba(42,32,14,0.95));
-  border-color: rgba(245,197,106,0.55); color:#fff3da;
-}
-.btn.err{
-  background: linear-gradient(180deg, rgba(64,28,28,0.96), rgba(40,18,18,0.96));
-  border-color: rgba(255,122,122,0.55); color:#ffecec;
-}
+.btn.ok{  background: linear-gradient(180deg, rgba(22,56,42,0.95), rgba(18,44,34,0.95)); border-color: rgba(52,211,153,0.55); color:#e8fff6; }
+.btn.warn{background: linear-gradient(180deg, rgba(58,46,20,0.95), rgba(42,32,14,0.95)); border-color: rgba(245,197,106,0.55); color:#fff3da;}
+.btn.err{ background: linear-gradient(180deg, rgba(64,28,28,0.96), rgba(40,18,18,0.96)); border-color: rgba(255,122,122,0.55); color:#ffecec; }
 
 /* Grids/linhas */
 .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
@@ -277,16 +281,20 @@ input[type=number]{ -moz-appearance:textfield; }
 }
 .msg-text{ white-space:pre-wrap; }
 .msg-meta{ font-size:12px; color:var(--muted); display:flex; gap:10px; align-items:center; }
+
+/* Aviso de HTTPS */
+#httpsWarn{
+  display:none; margin-top:8px; font-size:13px; color:#ffd7a0;
+  background: rgba(58,46,20,0.6); border:1px solid rgba(245,197,106,0.4);
+  padding:8px 10px; border-radius:10px;
+}
   </style>
 </head>
 <body>
   <!-- Header -->
   <header>
     <div class="wrap">
-      <!-- Ícone do Histórico (esquerda) -->
       <button class="icon-btn" onclick="abrirHistorico(event)" title="Histórico">📜</button>
-
-      <!-- Marca central -->
       <div class="brand">
         <div class="logo" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -308,11 +316,18 @@ input[type=number]{ -moz-appearance:textfield; }
       <div class="videoWrap" title="Toque para iniciar a câmera se necessário">
         <video id="video" autoplay playsinline muted></video>
         <canvas id="overlay"></canvas>
+
+        <!-- Botão para destravar câmera em navegadores que exigem gesto -->
+        <div id="startCamBtn">
+          <button onclick="userStartCamera()">▶️ Iniciar câmera</button>
+        </div>
+
         <div class="hud">
           <span class="tag">Mire a etiqueta dentro do retângulo (50% × 20%)</span>
         </div>
       </div>
-      <div class="tip">A leitura ocorre automaticamente ~a cada 1,2s. Use a câmera traseira e mantenha a etiqueta bem enquadrada. Toque na área da câmera se ela não iniciar automaticamente.</div>
+      <div id="httpsWarn">⚠️ Para a câmera funcionar, abra este app em <b>HTTPS</b> ou <b>localhost</b>.</div>
+      <div class="tip">A leitura ocorre automaticamente ~a cada 1,2s. Use a câmera traseira e mantenha a etiqueta bem enquadrada.</div>
     </section>
 
     <!-- Direita: sugestões + controles + total -->
@@ -333,7 +348,6 @@ input[type=number]{ -moz-appearance:textfield; }
         <button class="btn" onclick="multiplicarManual()">× Mult.</button>
         <button class="btn err" onclick="zerarTotal()">🧹 Zerar</button>
         <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer</button>
-        <!-- vazio para balancear o grid -->
       </div>
 
       <!-- Linha 3: utilidades -->
@@ -367,7 +381,7 @@ input[type=number]{ -moz-appearance:textfield; }
   <div id="feedModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="feedTitle">
     <div class="modal-card">
       <div class="modal-head">
-        <div class="modal-title" id="feedTitle"><!-- título removido --></div>
+        <div class="modal-title" id="feedTitle"></div>
         <div style="display:flex; gap:8px">
           <button class="btn" onclick="fecharFeed()">✖ Fechar</button>
         </div>
@@ -404,9 +418,16 @@ input[type=number]{ -moz-appearance:textfield; }
     /* ===== Câmera / elementos ===== */
     const video = document.getElementById('video');
     const overlay = document.getElementById('overlay');
+    const startCamBtnWrap = document.getElementById('startCamBtn');
+    const httpsWarn = document.getElementById('httpsWarn');
     const precosDiv = document.getElementById('precos');
     const somaSpan = document.getElementById('soma');
     const bip = document.getElementById('bip-audio');
+
+    // HTTPS aviso
+    if (!(location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')){
+      httpsWarn.style.display = 'block';
+    }
 
     /* ===== Histórico sessão ===== */
     const historico = []; // {tipo:'add'|'sub', valor, data, total}
@@ -488,30 +509,50 @@ input[type=number]{ -moz-appearance:textfield; }
       loadFeed();
     }
 
-    /* ===== Config de envio automático ===== */
-    const shareToChat = true;
-    function mapsRoute(lat, lng){ return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`; }
-
-    /* ===== Controle OCR pausa/retoma ===== */
+    /* ===== OCR pausa/retoma ===== */
     let ocrPaused = false;
     function pauseOCR(v){
       ocrPaused = !!v;
       if (ocrPaused) limparSugestoes();
     }
-    document.addEventListener('visibilitychange', ()=>{ pauseOCR(document.hidden); });
+    document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) ensureCamera(); pauseOCR(document.hidden); });
 
     /* ===== Câmera com fallback (traseira prioritária) ===== */
     let currentStream = null;
 
+    function isStreamActive(){
+      const s = video.srcObject;
+      if (!s) return false;
+      const tracks = s.getVideoTracks ? s.getVideoTracks() : [];
+      return !!(s.active && tracks.length && tracks[0].readyState === 'live');
+    }
+
     async function startWithConstraints(constraints){
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      if (currentStream){ currentStream.getTracks().forEach(t => t.stop()); }
+      stopCurrentStream();
       currentStream = stream;
       video.srcObject = stream;
+
+      // iOS/Safari: garantir inline + play
+      try{
+        video.setAttribute('playsinline','');
+        video.playsInline = true;
+        video.muted = true;
+        await video.play().catch(()=>{});
+      }catch(e){}
+
       video.onloadedmetadata = () => { syncOverlayToVideo(); desenharROI(); };
       window.addEventListener('resize', syncOverlayToVideo);
       window.addEventListener('orientationchange', syncOverlayToVideo);
+
+      hideStartOverlayIfActive();
       return stream;
+    }
+
+    function stopCurrentStream(){
+      if (currentStream){
+        currentStream.getTracks().forEach(t => t.stop());
+      }
     }
 
     function looksLikeBackLabel(label){
@@ -538,71 +579,58 @@ input[type=number]{ -moz-appearance:textfield; }
       try{
         await startWithConstraints({ video: { facingMode: { exact: 'environment' } }, audio:false });
         await trySwitchToRearByDeviceId();
-        return;
+        return true;
       }catch(e){ lastErr = e; }
 
       try{
         await startWithConstraints({ video: { facingMode: { ideal: 'environment' } }, audio:false });
         await trySwitchToRearByDeviceId();
-        return;
+        return true;
       }catch(e){ lastErr = e; }
 
       try{
         await startWithConstraints({ video: true, audio:false });
         await trySwitchToRearByDeviceId();
-        return;
+        return true;
       }catch(e){ lastErr = e; }
 
       try{
         await startWithConstraints({ video: true, audio:false });
-        return;
+        return true;
       }catch(e){ lastErr = e; }
 
       console.warn("Não foi possível iniciar a câmera:", lastErr);
+      showStartOverlay(); // pede gesto
+      return false;
     }
 
-    // Reforços pra garantir a câmera ligada
     async function ensureCamera(){
       try{
-        // se não há stream ou vídeo não está pronto, tenta iniciar
-        if (!video.srcObject || !video.srcObject.active || video.readyState < 2){
-          await iniciarCamera();
+        if (!isStreamActive()){
+          const ok = await iniciarCamera();
+          if (!ok) showStartOverlay();
         } else {
-          // se track está "ended", reinicia
-          const tracks = video.srcObject.getVideoTracks();
-          if (!tracks.length || tracks[0].readyState === 'ended'){
-            await iniciarCamera();
-          }
+          hideStartOverlayIfActive();
         }
       }catch(e){
-        // silencia tentativa; alguns navegadores exigem gesto
+        showStartOverlay();
       }
     }
 
-    // Alguns browsers (ex: Safari iOS) exigem gesto do usuário
-    function bindCameraAutostart(){
-      const wrap = document.querySelector('.videoWrap');
-      if (!wrap) return;
-      const handler = async () => {
-        await ensureCamera();
-      };
-      wrap.addEventListener('click', handler);
-      wrap.addEventListener('touchstart', handler, { passive:true });
+    function showStartOverlay(){ startCamBtnWrap.style.display = 'flex'; }
+    function hideStartOverlayIfActive(){ if (isStreamActive()) startCamBtnWrap.style.display = 'none'; }
+
+    async function userStartCamera(){
+      // gesto do usuário – chamar diretamente
+      await ensureCamera();
     }
 
-    // Pingar de tempos em tempos pra reativar se cair
-    setInterval(ensureCamera, 4000);
+    // Recover em eventos do ambiente
+    navigator.mediaDevices && navigator.mediaDevices.addEventListener && navigator.mediaDevices.addEventListener('devicechange', ensureCamera);
     window.addEventListener('focus', ensureCamera);
 
-    // Permissões (quando disponível) — ajuda a “destravar” em alguns navegadores
-    (async ()=>{
-      try{
-        if (navigator.permissions && navigator.permissions.query){
-          const res = await navigator.permissions.query({ name: 'camera' });
-          res.onchange = ()=>{ if (res.state === 'granted') ensureCamera(); };
-        }
-      }catch(e){}
-    })();
+    // Ping periódico (agressivo o suficiente)
+    setInterval(ensureCamera, 3000);
 
     /* ===== Somatório ===== */
     function adicionarPreco(valor, btn) {
@@ -995,6 +1023,8 @@ input[type=number]{ -moz-appearance:textfield; }
       if (stick) jumpToBottom();
     }
 
+    function mapsRoute(lat, lng){ return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`; }
+
     function sharePost(p){
       const precoTxt = (typeof p.valor === 'number' && isFinite(p.valor) && p.valor > 0) ? `Oferta: R$ ${Number(p.valor).toFixed(2)}\n` : '';
       const text = `${precoTxt}${p.coords ? `Mapa: ${mapsRoute(p.coords.lat, p.coords.lng)}` : ''}`.trim();
@@ -1175,16 +1205,6 @@ input[type=number]{ -moz-appearance:textfield; }
             });
             renderFeed();
             maybeJumpToBottom();
-
-            if (SYNC_TO_CLOUD) {
-              try {
-                await fetch(`${API_BASE}/api/post`, {
-                  method: 'POST',
-                  headers: { 'Content-Type':'application/json' },
-                  body: JSON.stringify({ deviceId, valor:+valor, coords, imageData:imageThumb })
-                });
-              } catch(e){ console.warn('cloud post erro:', e); }
-            }
           }, async () => {
             pushFeed({
               type:'post',
@@ -1200,16 +1220,6 @@ input[type=number]{ -moz-appearance:textfield; }
             });
             renderFeed();
             maybeJumpToBottom();
-
-            if (SYNC_TO_CLOUD) {
-              try {
-                await fetch(`${API_BASE}/api/post`, {
-                  method: 'POST',
-                  headers: { 'Content-Type':'application/json' },
-                  body: JSON.stringify({ deviceId, valor:+valor, coords:null, imageData:imageThumb })
-                });
-              } catch(e){ console.warn('cloud post erro:', e); }
-            }
           }, { enableHighAccuracy:true, timeout:7000 });
         }
       } catch (e) {
@@ -1217,15 +1227,27 @@ input[type=number]{ -moz-appearance:textfield; }
       }
     }
 
-    // ===== Inicialização =====
+    /* ===== Inicialização ===== */
     setInterval(capturarImagemEProcessar, 1200);
-    // força a câmera logo no carregamento
-    (async ()=>{
+
+    async function boot(){
+      // tentar ligar sozinho
       await ensureCamera();
-      bindCameraAutostart();
-    })();
+
+      // se ainda não ativo, mostrar botão
+      if (!isStreamActive()) showStartOverlay();
+
+      // clique/touch no vídeo também tenta
+      const wrap = document.querySelector('.videoWrap');
+      if (wrap){
+        const handler = async ()=>{ await userStartCamera(); };
+        wrap.addEventListener('click', handler);
+        wrap.addEventListener('touchstart', handler, { passive:true });
+      }
+    }
 
     loadState();
+    boot();
   </script>
 </body>
 </html>
