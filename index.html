@@ -128,8 +128,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   box-shadow: 0 0 0 3px rgba(127,180,255,0.18);
   background: rgba(10,14,32,0.65);
 }
-.input-qty{ width:92px; text-align:center; }
-.mult-group{ display:flex; gap:8px; align-items:center; }
+.input-qty{ text-align:center; }
 
 /* Botões */
 .btn{
@@ -254,9 +253,20 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 .manual-group .input{ flex:1; text-align:center; }
 .manual-btn{ flex:0 0 54px; padding:10px; font-size:1.1em; font-weight:bold; }
 
-/* ===== Linha de ações iguais (Multiplicar, Zerar, Desfazer) ===== */
-.actions-equal{ display:flex; gap:10px; align-items:center; }
-.actions-equal .btn{ flex:1; min-width:0; } /* cada botão ocupa espaço igual */
+/* ===== Linha única com 4 elementos em espaços iguais ===== */
+.actions-grid{
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap:10px;
+  align-items:stretch;
+}
+.actions-grid .input,
+.actions-grid .btn{ width:100%; height:100%; }
+
+/* Responsivo (opcional): em telas muito estreitas, quebra em 2x2 */
+@media (max-width:420px){
+  .actions-grid{ grid-template-columns: repeat(2, 1fr); }
+}
   </style>
 </head>
 <body>
@@ -303,17 +313,15 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
         <button class="btn warn manual-btn" onclick="diminuirManual()" title="Subtrair valor">➖</button>
       </div>
 
-      <!-- Linha 2: Qtd + [ Multiplicar | Zerar | Desfazer ] com espaço igual -->
-      <div class="row" style="align-items:stretch">
+      <!-- Linha 2: [ Qtd. | × Multiplicar | 🧹 Zerar | ↩️ Desfazer ] com espaço igual -->
+      <div class="actions-grid">
         <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
-        <div class="actions-equal" style="flex:1">
-          <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
-          <button class="btn err" onclick="zerarTotal()">🧹 Zerar</button>
-          <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer</button>
-        </div>
+        <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
+        <button class="btn err" onclick="zerarTotal()">🧹 Zerar</button>
+        <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer</button>
       </div>
 
-      <!-- Linha 3: utilidades/ações (sem Apagar sugestões) -->
+      <!-- Linha 3: utilidades/ações (sem “Apagar sugestões”) -->
       <div class="row">
         <button class="btn" onclick="abrirHistorico(event)">📜 Histórico</button>
         <button class="btn" onclick="abrirFeed(event)">💬 Chat</button>
