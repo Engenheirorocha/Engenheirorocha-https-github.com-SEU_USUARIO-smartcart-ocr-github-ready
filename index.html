@@ -190,8 +190,7 @@ input[type=number]{ -moz-appearance:textfield; }
 }
 .manual-actions > *{ min-width:0; }
 
-/* Linha 2: Qtd / × Mult. / 🧹 Zerar / ↩️ Desfazer / (espaço)
-   — Zerar e Desfazer com 1.2fr (maiores) */
+/* Linha 2: Qtd / × Mult. / 🧹 Zerar / ↩️ Desfazer / (espaço) */
 .actions-grid-5{
   display:grid;
   grid-template-columns: 1fr 1fr 1.2fr 1.2fr 0.0001fr;
@@ -253,7 +252,7 @@ input[type=number]{ -moz-appearance:textfield; }
 .pill.add{ color:#d9ffe9; background: rgba(24,42,30,0.7); border-color: rgba(72,140,92,0.45) }
 .pill.sub{ color:#ffe0e0; background: rgba(52,24,24,0.6); border-color: rgba(164,74,74,0.45) }
 
-/* Chat/Feed */
+/* Feed */
 #feedScroll{ overflow: auto; }
 .feed{ display:flex; flex-direction:column; gap:12px; }
 .post{
@@ -337,9 +336,9 @@ input[type=number]{ -moz-appearance:textfield; }
         <!-- vazio para balancear o grid -->
       </div>
 
-      <!-- Linha 3: utilidades (Histórico REMOVIDO daqui) -->
+      <!-- Linha 3: utilidades -->
       <div class="row">
-        <button class="btn" onclick="abrirFeed(event)">💬 Chat</button>
+        <button class="btn" onclick="abrirFeed(event)">🔎 Radar de preços</button>
       </div>
 
       <div id="total">
@@ -364,7 +363,7 @@ input[type=number]{ -moz-appearance:textfield; }
     </div>
   </div>
 
-  <!-- Modal Chat/Feed -->
+  <!-- Modal Feed -->
   <div id="feedModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="feedTitle">
     <div class="modal-card">
       <div class="modal-head">
@@ -380,7 +379,6 @@ input[type=number]{ -moz-appearance:textfield; }
         <input id="chatInput" class="input foot-input" type="text" placeholder="Escreva uma mensagem..." />
         <button class="btn" onclick="abrirPickerFoto()">📷 Foto</button>
         <button class="btn ok" onclick="enviarMensagem()">📨 Enviar</button>
-        <!-- input de arquivo escondido -->
         <input id="photoInput" type="file" accept="image/*" capture="environment" style="display:none" />
       </div>
     </div>
@@ -392,8 +390,8 @@ input[type=number]{ -moz-appearance:textfield; }
   <!-- JS -->
   <script>
     /* ==== Cloud sync (Workers) ==== */
-    const SYNC_TO_CLOUD = false; // troque para true quando tiver seu Worker
-    const API_BASE = "https://smartcart-chat.SEU_SUBDOMINIO.workers.dev"; // sua URL depois
+    const SYNC_TO_CLOUD = false;
+    const API_BASE = "https://smartcart-chat.SEU_SUBDOMINIO.workers.dev";
 
     // id único do aparelho
     const DID_KEY = 'sc_device_id';
@@ -423,7 +421,7 @@ input[type=number]{ -moz-appearance:textfield; }
     // OCR cooldown / TTL
     let lastSuggestionsAt = 0;
     const SUGGESTIONS_COOLDOWN = 1200;
-    const SUGGESTIONS_TTL_MS   = 8000; // auto-expira sugestões antigas
+    const SUGGESTIONS_TTL_MS   = 8000;
 
     // ROI
     const roi = { x:0, y:0, w:0, h:0 };
@@ -491,14 +489,14 @@ input[type=number]{ -moz-appearance:textfield; }
     }
 
     /* ===== Config de envio automático ===== */
-    const shareToChat = true; // sempre ligado
+    const shareToChat = true;
     function mapsRoute(lat, lng){ return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`; }
 
     /* ===== Controle OCR pausa/retoma ===== */
     let ocrPaused = false;
     function pauseOCR(v){
       ocrPaused = !!v;
-      if (ocrPaused) limparSugestoes(); // limpa sugestões ao pausar
+      if (ocrPaused) limparSugestoes();
     }
     document.addEventListener('visibilitychange', ()=>{ pauseOCR(document.hidden); });
 
@@ -537,7 +535,6 @@ input[type=number]{ -moz-appearance:textfield; }
 
     async function iniciarCamera(){
       let lastErr;
-
       try{
         await startWithConstraints({ video: { facingMode: { exact: 'environment' } }, audio:false });
         await trySwitchToRearByDeviceId();
@@ -561,21 +558,51 @@ input[type=number]{ -moz-appearance:textfield; }
         return;
       }catch(e){ lastErr = e; }
 
-      alert("Não foi possível iniciar a câmera: " + (lastErr && lastErr.message ? lastErr.message : lastErr));
+      console.warn("Não foi possível iniciar a câmera:", lastErr);
+    }
+
+    // Reforços pra garantir a câmera ligada
+    async function ensureCamera(){
+      try{
+        // se não há stream ou vídeo não está pronto, tenta iniciar
+        if (!video.srcObject || !video.srcObject.active || video.readyState < 2){
+          await iniciarCamera();
+        } else {
+          // se track está "ended", reinicia
+          const tracks = video.srcObject.getVideoTracks();
+          if (!tracks.length || tracks[0].readyState === 'ended'){
+            await iniciarCamera();
+          }
+        }
+      }catch(e){
+        // silencia tentativa; alguns navegadores exigem gesto
+      }
     }
 
     // Alguns browsers (ex: Safari iOS) exigem gesto do usuário
     function bindCameraAutostart(){
       const wrap = document.querySelector('.videoWrap');
       if (!wrap) return;
-      const handler = () => {
-        if (!video.srcObject) iniciarCamera();
-        wrap.removeEventListener('click', handler);
-        wrap.removeEventListener('touchstart', handler);
+      const handler = async () => {
+        await ensureCamera();
       };
-      wrap.addEventListener('click', handler, { once:true });
-      wrap.addEventListener('touchstart', handler, { once:true, passive:true });
+      wrap.addEventListener('click', handler);
+      wrap.addEventListener('touchstart', handler, { passive:true });
     }
+
+    // Pingar de tempos em tempos pra reativar se cair
+    setInterval(ensureCamera, 4000);
+    window.addEventListener('focus', ensureCamera);
+
+    // Permissões (quando disponível) — ajuda a “destravar” em alguns navegadores
+    (async ()=>{
+      try{
+        if (navigator.permissions && navigator.permissions.query){
+          const res = await navigator.permissions.query({ name: 'camera' });
+          res.onchange = ()=>{ if (res.state === 'granted') ensureCamera(); };
+        }
+      }catch(e){}
+    })();
 
     /* ===== Somatório ===== */
     function adicionarPreco(valor, btn) {
@@ -750,10 +777,10 @@ input[type=number]{ -moz-appearance:textfield; }
       }
     }, 1000);
 
-    /* ===== Chat/Feed ===== */
+    /* ===== Feed ===== */
     const FEED_LIMIT = 200;
-    let feed = []; // it: {type:'post'|'msg', ...}
-    let feedOpen = false; // controla estado para o botão voltar
+    let feed = []; // {type:'post'|'msg', ...}
+    let feedOpen = false;
 
     function loadFeed(){
       try {
@@ -1018,7 +1045,7 @@ input[type=number]{ -moz-appearance:textfield; }
       } else add(null);
     }
 
-    /* ===== Botão de foto no chat ===== */
+    /* ===== Botão de foto no feed ===== */
     function abrirPickerFoto(){
       const input = document.getElementById('photoInput');
       if (!input) return;
@@ -1115,7 +1142,7 @@ input[type=number]{ -moz-appearance:textfield; }
       });
     }
 
-    /* ===== Captura foto + envia para chat (post) automática ao somar ===== */
+    /* ===== Captura foto + envia para feed ao somar ===== */
     async function capturarEEnviarImagem(valor) {
       try {
         const fullCanvas = document.createElement('canvas');
@@ -1192,8 +1219,12 @@ input[type=number]{ -moz-appearance:textfield; }
 
     // ===== Inicialização =====
     setInterval(capturarImagemEProcessar, 1200);
-    iniciarCamera();       // tenta iniciar automaticamente
-    bindCameraAutostart(); // e também por gesto, se o browser exigir
+    // força a câmera logo no carregamento
+    (async ()=>{
+      await ensureCamera();
+      bindCameraAutostart();
+    })();
+
     loadState();
   </script>
 </body>
