@@ -35,9 +35,6 @@
   --err:#ff7a7a;
 
   --shadow: 0 10px 28px rgba(6,12,32,0.40), inset 0 1px rgba(255,255,255,0.05);
-
-  /* Largura do trilho de botões à direita */
-  --right-buttons-w: 128px; /* ajuste se quiser mais fino: 120–160px */
 }
 
 *{ box-sizing:border-box }
@@ -252,41 +249,10 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 .msg-text{ white-space:pre-wrap; }
 .msg-meta{ font-size:12px; color:var(--muted); display:flex; gap:10px; align-items:center; }
 
-/* =========================
-   >>> Trilho de botões à direita (compacto)
-   ========================= */
-.aside-head{ order:0; }             /* sobe acima do título/sugestões */
-aside.card.stack > .title{ order:1; }
-aside.card.stack > #precos{ order:2; }
-
-.aside-head{
-  display:grid;
-  grid-template-columns: 1fr var(--right-buttons-w);
-  grid-template-areas: "inputs buttons";
-  align-items:start; /* topo do Adicionar = topo do campo manual */
-  gap:12px;
-  margin:4px 0 6px 0;
-}
-
-.aside-inputs{ grid-area:inputs; display:flex; flex-direction:column; gap:8px; }
-.right-buttons{ grid-area:buttons; display:flex; flex-direction:column; gap:8px; }
-
-/* botões menores no trilho */
-.right-buttons .btn{
-  width:100%;
-  padding:7px 9px;
-  font-size:13px;
-  border-radius:10px;
-  white-space:nowrap;
-}
-
-/* responsivo: em telas estreitas empilha */
-@media (max-width:860px){
-  .aside-head{
-    grid-template-columns:1fr;
-    grid-template-areas:"inputs" "buttons";
-  }
-}
+/* ===== Ajuste específico pedido: input entre ➕ e ➖ ===== */
+.manual-group{ display:flex; align-items:center; gap:8px; width:100%; }
+.manual-group .input{ flex:1; text-align:center; }
+.manual-btn{ flex:0 0 54px; padding:10px; font-size:1.1em; font-weight:bold; }
   </style>
 </head>
 <body>
@@ -321,35 +287,32 @@ aside.card.stack > #precos{ order:2; }
       <div class="tip">A leitura ocorre automaticamente ~a cada 1,2s. Use a câmera traseira e mantenha a etiqueta bem enquadrada. Toque na área da câmera se ela não iniciar automaticamente.</div>
     </section>
 
-    <!-- Direita: controles (fixo topo) + sugestões + total -->
+    <!-- Direita: sugestões + controles + total -->
     <aside class="card stack">
-
-      <!-- BLOCO FIXO NO TOPO: campo manual à esquerda + 7 botões na direita -->
-      <div class="aside-head">
-        <div class="aside-inputs">
-          <div class="row">
-            <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor unitário (ex: 0.77)">
-            <div class="mult-group">
-              <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
-              <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="right-buttons">
-          <button class="btn ok"   onclick="adicionarManual()">➕ Adicionar</button>
-          <button class="btn warn" onclick="diminuirManual()">➖ Subtrair</button>
-          <button class="btn err"  onclick="limparSugestoes()">❌ Apagar sugestões</button>
-          <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer último</button>
-          <button class="btn err"  onclick="zerarTotal()">🧹 Zerar Total</button>
-          <button class="btn"      onclick="abrirHistorico(event)">📜 Histórico</button>
-          <button class="btn"      onclick="abrirFeed(event)">💬 Chat</button>
-        </div>
-      </div>
-      <!-- /aside-head -->
-
       <div class="title">Sugestões de preço</div>
       <div id="precos"></div>
+
+      <!-- Linha 1: valor manual com ➕ (esq) [input] ➖ (dir) -->
+      <div class="manual-group">
+        <button class="btn ok manual-btn" onclick="adicionarManual()" title="Somar valor">➕</button>
+        <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor unitário (ex: 0.77)">
+        <button class="btn warn manual-btn" onclick="diminuirManual()" title="Subtrair valor">➖</button>
+      </div>
+
+      <!-- Linha 2: grupo (Qtd + Multiplicar) -->
+      <div class="row">
+        <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
+        <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
+      </div>
+
+      <!-- Linha 3: utilidades/ações -->
+      <div class="row">
+        <button class="btn err" onclick="zerarTotal()">🧹 Zerar Total</button>
+        <button class="btn err" onclick="limparSugestoes()">❌ Apagar sugestões</button>
+        <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer último</button>
+        <button class="btn" onclick="abrirHistorico(event)">📜 Histórico</button>
+        <button class="btn" onclick="abrirFeed(event)">💬 Chat</button>
+      </div>
 
       <div id="total">
         <span>Total</span>
@@ -421,7 +384,7 @@ aside.card.stack > #precos{ order:2; }
 
     /* ===== Histórico sessão ===== */
     const historico = []; // {tipo:'add'|'sub', valor, data, total}
-    function registrar(tipo, valor){ historico.unshift({ tipo, valor, data: new Date(), total: total }); }
+    function registrar(tipo, valor){ historico.unshift({ tipo, valor, data: new Date(), total }); }
 
     let total = 0;
     let canvas = document.createElement('canvas');
@@ -719,10 +682,9 @@ aside.card.stack > #precos{ order:2; }
       if (dw > MAX_W) { const s = MAX_W / dw; dw = Math.max(1, Math.round(dw*s)); dh = Math.max(1, Math.round(dh*s)); }
       canvas.width = dw; canvas.height = dh;
 
-      const ctx2d = canvas.getContext('2d');
-      if (ctx2d.filter !== undefined) ctx2d.filter = 'grayscale(1) contrast(115%)';
-      ctx2d.drawImage(video, roiX, roiY, roiWidth, roiHeight, 0, 0, dw, dh);
-      if (ctx2d.filter !== undefined) ctx2d.filter = 'none';
+      if (ctx.filter !== undefined) ctx.filter = 'grayscale(1) contrast(115%)';
+      ctx.drawImage(video, roiX, roiY, roiWidth, roiHeight, 0, 0, dw, dh);
+      if (ctx.filter !== undefined) ctx.filter = 'none';
 
       try {
         const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
@@ -1225,3 +1187,4 @@ aside.card.stack > #precos{ order:2; }
   </script>
 </body>
 </html>
+
