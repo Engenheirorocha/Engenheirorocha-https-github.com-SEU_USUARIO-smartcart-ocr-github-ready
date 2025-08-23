@@ -116,12 +116,12 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 .preco-btn:hover{ transform: translateY(-1px); box-shadow: 0 12px 26px rgba(7,20,12,0.45); filter: brightness(1.03); }
 .preco-btn.pulse{ transform: scale(1.04) }
 
-/* Inputs/botões */
-.row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+/* Inputs/botões base */
 .input{
   border:1px solid var(--card-border); background: rgba(10,14,32,0.55);
   color:var(--text); padding: 10px 12px; border-radius:12px; outline:none;
   transition: border-color .12s ease, box-shadow .12s ease, background .12s ease;
+  min-height:42px;
 }
 .input:focus-visible{
   border-color: rgba(127,180,255,0.65);
@@ -138,6 +138,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   padding:10px 12px; border-radius:12px; cursor:pointer;
   transition: transform .12s ease, background .12s ease, border-color .12s ease, box-shadow .12s ease, filter .12s ease;
   box-shadow: 0 6px 16px rgba(6,12,32,0.25);
+  min-height:42px;
 }
 .btn:hover{ transform: translateY(-1px); filter: brightness(1.03); }
 .btn:active{ transform: translateY(0); filter: brightness(0.98); }
@@ -171,6 +172,30 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 .btn.err:hover{
   box-shadow: 0 10px 24px rgba(160,70,70,0.35), 0 0 0 1px rgba(255,122,122,0.35) inset;
   border-color: rgba(255,122,122,0.75);
+}
+
+/* Grids das ações */
+.row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+.manual-actions{
+  display:grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap:10px;
+}
+.actions-grid-5{
+  display:grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap:10px;
+  align-items:stretch;
+}
+.actions-grid-5 .input,
+.actions-grid-5 .btn{ width:100%; height:100%; }
+
+/* Responsivo: em telas estreitas, quebrar de forma elegante */
+@media (max-width:720px){
+  .actions-grid-5{ grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width:520px){
+  .actions-grid-5{ grid-template-columns: repeat(2, 1fr); }
 }
 
 /* Total */
@@ -247,26 +272,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 }
 .msg-text{ white-space:pre-wrap; }
 .msg-meta{ font-size:12px; color:var(--muted); display:flex; gap:10px; align-items:center; }
-
-/* ===== Ajuste: input manual entre ➕ e ➖ ===== */
-.manual-group{ display:flex; align-items:center; gap:8px; width:100%; }
-.manual-group .input{ flex:1; text-align:center; }
-.manual-btn{ flex:0 0 54px; padding:10px; font-size:1.1em; font-weight:bold; }
-
-/* ===== Linha única com 4 elementos em espaços iguais ===== */
-.actions-grid{
-  display:grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap:10px;
-  align-items:stretch;
-}
-.actions-grid .input,
-.actions-grid .btn{ width:100%; height:100%; }
-
-/* Responsivo (opcional): em telas muito estreitas, quebra em 2x2 */
-@media (max-width:420px){
-  .actions-grid{ grid-template-columns: repeat(2, 1fr); }
-}
   </style>
 </head>
 <body>
@@ -306,22 +311,22 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       <div class="title">Sugestões de preço</div>
       <div id="precos"></div>
 
-      <!-- Linha 1: valor manual com ➕ (esq) [input] ➖ (dir) -->
-      <div class="manual-group">
-        <button class="btn ok manual-btn" onclick="adicionarManual()" title="Somar valor">➕</button>
-        <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor unitário (ex: 0.77)">
-        <button class="btn warn manual-btn" onclick="diminuirManual()" title="Subtrair valor">➖</button>
+      <!-- Linha 1: atalhos ➕ / ➖ (usam o campo Valor da linha abaixo) -->
+      <div class="manual-actions">
+        <button class="btn ok" onclick="adicionarManual()" title="Somar valor">➕ Adicionar</button>
+        <button class="btn warn" onclick="diminuirManual()" title="Subtrair valor">➖ Subtrair</button>
       </div>
 
-      <!-- Linha 2: [ Qtd. | × Multiplicar | 🧹 Zerar | ↩️ Desfazer ] com espaço igual -->
-      <div class="actions-grid">
+      <!-- Linha 2: tudo na mesma linha (espaços iguais) -->
+      <div class="actions-grid-5">
+        <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor (ex: 0.77)">
         <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
         <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
         <button class="btn err" onclick="zerarTotal()">🧹 Zerar</button>
         <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer</button>
       </div>
 
-      <!-- Linha 3: utilidades/ações (sem “Apagar sugestões”) -->
+      <!-- Linha 3: utilidades -->
       <div class="row">
         <button class="btn" onclick="abrirHistorico(event)">📜 Histórico</button>
         <button class="btn" onclick="abrirFeed(event)">💬 Chat</button>
@@ -408,7 +413,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
     // OCR cooldown / TTL
     let lastSuggestionsAt = 0;
     const SUGGESTIONS_COOLDOWN = 1200;
-    const SUGGESTIONS_TTL_MS   = 8000; // auto-expira em ~8s sem nova leitura
+    const SUGGESTIONS_TTL_MS   = 8000; // auto-expira sugestões antigas
 
     // ROI
     const roi = { x:0, y:0, w:0, h:0 };
@@ -483,7 +488,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
     let ocrPaused = false;
     function pauseOCR(v){
       ocrPaused = !!v;
-      if (ocrPaused) limparSugestoes(); // ao pausar, limpa sugestões para não “travar” visual
+      if (ocrPaused) limparSugestoes(); // limpa sugestões ao pausar
     }
     document.addEventListener('visibilitychange', ()=>{ pauseOCR(document.hidden); });
 
@@ -581,7 +586,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       let qtd = parseInt(qtyEl.value, 10);
 
       if (isNaN(valor) || valor <= 0){
-        alert('Digite primeiro um valor unitário válido.');
+        alert('Digite primeiro um valor válido em "Valor".');
         input.focus();
         return;
       }
@@ -601,26 +606,24 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
     function adicionarManual() {
       const input = document.getElementById('manualInput');
       const valor = parseFloat((input.value || '').replace(',', '.'));
-      if (isNaN(valor) || valor <= 0) { alert("Digite um valor válido."); input.value=''; input.focus(); return; }
+      if (isNaN(valor) || valor <= 0) { alert("Digite um valor válido em 'Valor'."); input.focus(); return; }
       total += valor; valoresAdicionados.push(valor);
       somaSpan.innerText = total.toFixed(2);
       limparSugestoes(); sugestoesFixas = false; bip.play();
       registrar('add', valor);
       saveState();
-      input.value=''; input.blur();
     }
 
     function diminuirManual() {
       const input = document.getElementById('manualInput');
       const valor = parseFloat((input.value || '').replace(',', '.'));
-      if (isNaN(valor) || valor <= 0) { alert("Digite um valor válido."); input.value=''; input.focus(); return; }
+      if (isNaN(valor) || valor <= 0) { alert("Digite um valor válido em 'Valor'."); input.focus(); return; }
       total -= valor; if (total < 0) total = 0;
       valoresAdicionados.push(-valor);
       somaSpan.innerText = total.toFixed(2);
       limparSugestoes(); sugestoesFixas = false; bip.play();
       registrar('sub', valor);
       saveState();
-      input.value=''; input.blur();
     }
 
     function zerarTotal() {
@@ -730,7 +733,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       finally { isProcessing = false; }
     }
 
-    // Auto-expiração de sugestões (se nada novo chega por muito tempo)
+    // Auto-expiração de sugestões
     setInterval(()=>{
       const now = Date.now();
       if (!ocrPaused && precosDiv.childElementCount > 0 && (now - lastSuggestionsAt > SUGGESTIONS_TTL_MS)) {
@@ -758,7 +761,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       saveFeed();
     }
 
-    // normalização de post (métricas)
     function normalizePost(p){
       if (!p || p.type !== 'post') return p;
       if (typeof p.up !== 'number') p.up = 0;
@@ -767,14 +769,13 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       return p;
     }
 
-    // votar: um por usuário (deviceId)
     function votar(postId, tipo){ // 'up' | 'down'
       const idx = feed.findIndex(it => it.type === 'post' && it.id === postId);
       if (idx === -1) return;
       const p = normalizePost(feed[idx]);
 
       const prev = p.voters[deviceId];
-      if (prev === tipo) return; // já votou igual
+      if (prev === tipo) return;
 
       if (prev === 'up' && p.up > 0) p.up--;
       if (prev === 'down' && p.down > 0) p.down--;
@@ -788,22 +789,14 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       renderFeed();
     }
 
-    /* ===== Scroll helpers ===== */
-    function getFeedScroller(){
-      return document.getElementById('feedScroll'); // quem de fato rola
-    }
-    function isNearBottom(el){
-      if (!el) return true;
-      return (el.scrollHeight - el.scrollTop - el.clientHeight) < 40;
-    }
+    function getFeedScroller(){ return document.getElementById('feedScroll'); }
+    function isNearBottom(el){ if (!el) return true; return (el.scrollHeight - el.scrollTop - el.clientHeight) < 40; }
     function jumpToBottom(){
       const scroller = getFeedScroller();
       if (!scroller) return;
       requestAnimationFrame(()=>{
         scroller.scrollTop = scroller.scrollHeight;
-        requestAnimationFrame(()=>{
-          scroller.scrollTop = scroller.scrollHeight; // garante após imagens
-        });
+        requestAnimationFrame(()=>{ scroller.scrollTop = scroller.scrollHeight; });
       });
     }
     function maybeJumpToBottom(){
@@ -814,7 +807,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
     async function abrirFeed(e){
       if (e) e.stopPropagation(); pauseOCR(true);
 
-      // opcional: sync cloud
       if (SYNC_TO_CLOUD) {
         try {
           const res = await fetch(`${API_BASE}/api/feed?deviceId=${encodeURIComponent(deviceId)}`);
@@ -843,25 +835,17 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       document.getElementById('feedModal').classList.add('show');
       feedOpen = true;
       history.pushState({feed:true}, '');
-
-      // ao abrir, cola no fim (mensagem mais recente imediatamente visível)
       jumpToBottom();
     }
 
-    function fecharFeed(){
-      if (feedOpen) history.back();
-    }
+    function fecharFeed(){ if (feedOpen) history.back(); }
     function fecharFeedInternal(){
       const modal = document.getElementById('feedModal');
       if (modal) modal.classList.remove('show');
       feedOpen = false;
       pauseOCR(false);
     }
-    window.addEventListener('popstate', ()=>{
-      if (feedOpen){
-        fecharFeedInternal();
-      }
-    });
+    window.addEventListener('popstate', ()=>{ if (feedOpen){ fecharFeedInternal(); } });
 
     function renderFeed(){
       const lista = document.getElementById('feedLista');
@@ -870,7 +854,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 
       if (lista) lista.innerHTML = '';
 
-      // ORDEM ASCENDENTE: antigos → novos (novos no fundo)
       const items = [...feed].sort((a,b)=> new Date(a.ts) - new Date(b.ts));
 
       if (!items.length){
@@ -915,10 +898,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
             img.alt = p.valor ? `Preço: R$ ${Number(p.valor).toFixed(2)}` : 'Foto enviada';
             img.loading = 'lazy';
             img.decoding = 'async';
-            img.onload = () => {
-              const scr = getFeedScroller();
-              if (isNearBottom(scr)) jumpToBottom();
-            };
+            img.onload = () => { const scr = getFeedScroller(); if (isNearBottom(scr)) jumpToBottom(); };
 
             const body = document.createElement('div'); body.className = 'post-body';
             const title = document.createElement('div'); title.className='post-title';
@@ -943,7 +923,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
             btnShare.onclick = ()=> sharePost(p);
             actions.appendChild(btnMap); actions.appendChild(btnShare);
 
-            // --- VOTOS ---
             const userVote = p.voters && p.voters[deviceId];
             const voteWrap = document.createElement('div');
             voteWrap.style.display = 'flex';
@@ -1010,7 +989,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
     function enviarMensagem(){
       const input = document.getElementById('chatInput');
       let text = (input.value || '').trim();
-      if (!text) { input.blur(); return; } // teclado só se digitar
+      if (!text) { input.blur(); return; }
 
       const id = Date.now() + '_' + Math.random().toString(36).slice(2,7);
       const ts = new Date().toISOString();
@@ -1032,7 +1011,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       } else add(null);
     }
 
-    /* ===== Botão de foto no chat ===== */
+    /* ===== Foto no chat ===== */
     function abrirPickerFoto(){
       const input = document.getElementById('photoInput');
       if (!input) return;
@@ -1081,18 +1060,14 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
             ()  => postNow(null),
             { enableHighAccuracy:true, timeout:7000 }
           );
-        } else {
-          postNow(null);
-        }
+        } else { postNow(null); }
 
         if (SYNC_TO_CLOUD){
           try{
             await fetch(`${API_BASE}/api/post`, {
               method:'POST',
               headers:{ 'Content-Type':'application/json' },
-              body: JSON.stringify({
-                deviceId, valor: (valor !== null ? +valor : null), coords: null, imageData: compressed
-              })
+              body: JSON.stringify({ deviceId, valor: (valor !== null ? +valor : null), coords: null, imageData: compressed })
             });
           }catch(e){ console.warn('cloud post erro:', e); }
         }
@@ -1133,7 +1108,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       });
     }
 
-    /* ===== Captura foto + envia para chat (post) automática ao somar ===== */
+    /* ===== Snapshot automático no somar ===== */
     async function capturarEEnviarImagem(valor) {
       try {
         const fullCanvas = document.createElement('canvas');
@@ -1152,20 +1127,8 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
         if (shareToChat) {
           navigator.geolocation.getCurrentPosition(async (position) => {
             const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
-            pushFeed({
-              type:'post',
-              id: Date.now() + '_' + Math.random().toString(36).slice(2,7),
-              ts: new Date().toISOString(),
-              valor: +valor,
-              img: imageThumb,
-              coords,
-              up: 0,
-              down: 0,
-              voters: {},
-              author: deviceId
-            });
-            renderFeed();
-            maybeJumpToBottom();
+            pushFeed({ type:'post', id: Date.now() + '_' + Math.random().toString(36).slice(2,7), ts: new Date().toISOString(), valor:+valor, img:imageThumb, coords, up:0, down:0, voters:{}, author:deviceId });
+            renderFeed(); maybeJumpToBottom();
 
             if (SYNC_TO_CLOUD) {
               try {
@@ -1177,20 +1140,8 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
               } catch(e){ console.warn('cloud post erro:', e); }
             }
           }, async () => {
-            pushFeed({
-              type:'post',
-              id: Date.now() + '_' + Math.random().toString(36).slice(2,7),
-              ts: new Date().toISOString(),
-              valor: +valor,
-              img: imageThumb,
-              coords: null,
-              up: 0,
-              down: 0,
-              voters: {},
-              author: deviceId
-            });
-            renderFeed();
-            maybeJumpToBottom();
+            pushFeed({ type:'post', id: Date.now() + '_' + Math.random().toString(36).slice(2,7), ts: new Date().toISOString(), valor:+valor, img:imageThumb, coords:null, up:0, down:0, voters:{}, author:deviceId });
+            renderFeed(); maybeJumpToBottom();
 
             if (SYNC_TO_CLOUD) {
               try {
