@@ -36,8 +36,8 @@
 
   --shadow: 0 10px 28px rgba(6,12,32,0.40), inset 0 1px rgba(255,255,255,0.05);
 
-  /* Largura da coluna dos botões (direita) */
-  --right-buttons-w: 150px;
+  /* Largura do trilho de botões à direita */
+  --right-buttons-w: 128px; /* ajuste se quiser mais fino: 120–160px */
 }
 
 *{ box-sizing:border-box }
@@ -134,7 +134,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 .input-qty{ width:92px; text-align:center; }
 .mult-group{ display:flex; gap:8px; align-items:center; }
 
-/* Botões (estilo base) */
+/* Botões */
 .btn{
   border:1px solid var(--card-border);
   background: linear-gradient(180deg, rgba(14,20,42,0.85), rgba(10,16,34,0.85));
@@ -245,34 +245,48 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 }
 .btn-ghost[disabled]{ opacity:.5; cursor:not-allowed }
 
-/* ====== COLUNA DE BOTÕES À DIREITA (fixo) ====== */
+.msg{
+  border:1px solid var(--card-border); border-radius:14px; background: rgba(8,12,28,0.5);
+  padding:10px 12px; display:flex; flex-direction:column; gap:6px;
+}
+.msg-text{ white-space:pre-wrap; }
+.msg-meta{ font-size:12px; color:var(--muted); display:flex; gap:10px; align-items:center; }
+
+/* =========================
+   >>> Trilho de botões à direita (compacto)
+   ========================= */
+.aside-head{ order:0; }             /* sobe acima do título/sugestões */
+aside.card.stack > .title{ order:1; }
+aside.card.stack > #precos{ order:2; }
+
 .aside-head{
   display:grid;
   grid-template-columns: 1fr var(--right-buttons-w);
   grid-template-areas: "inputs buttons";
-  align-items:start;   /* topo dos botões = topo do campo manual */
+  align-items:start; /* topo do Adicionar = topo do campo manual */
   gap:12px;
-  margin:8px 0 4px 0;
+  margin:4px 0 6px 0;
 }
+
+.aside-inputs{ grid-area:inputs; display:flex; flex-direction:column; gap:8px; }
+.right-buttons{ grid-area:buttons; display:flex; flex-direction:column; gap:8px; }
+
+/* botões menores no trilho */
+.right-buttons .btn{
+  width:100%;
+  padding:7px 9px;
+  font-size:13px;
+  border-radius:10px;
+  white-space:nowrap;
+}
+
+/* responsivo: em telas estreitas empilha */
 @media (max-width:860px){
   .aside-head{
     grid-template-columns:1fr;
     grid-template-areas:"inputs" "buttons";
   }
 }
-.aside-inputs{ grid-area: inputs; display:flex; flex-direction:column; gap:8px; }
-.right-buttons{ grid-area: buttons; display:flex; flex-direction:column; gap:8px; }
-
-/* botões menores no trilho da direita */
-.right-buttons .btn{
-  width:100%;
-  padding:8px 10px;
-  font-size:14px;
-  border-radius:10px;
-}
-
-/* campo manual um pouco mais compacto para caber melhor */
-#manualInput{ width:120px; }
   </style>
 </head>
 <body>
@@ -307,12 +321,10 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       <div class="tip">A leitura ocorre automaticamente ~a cada 1,2s. Use a câmera traseira e mantenha a etiqueta bem enquadrada. Toque na área da câmera se ela não iniciar automaticamente.</div>
     </section>
 
-    <!-- Direita: sugestões + controles + total -->
+    <!-- Direita: controles (fixo topo) + sugestões + total -->
     <aside class="card stack">
-      <div class="title">Sugestões de preço</div>
-      <div id="precos"></div>
 
-      <!-- BLOCO ÚNICO: campo manual à esquerda + 7 botões em coluna à direita -->
+      <!-- BLOCO FIXO NO TOPO: campo manual à esquerda + 7 botões na direita -->
       <div class="aside-head">
         <div class="aside-inputs">
           <div class="row">
@@ -324,7 +336,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
           </div>
         </div>
 
-        <!-- 7 botões, um embaixo do outro; topo alinhado ao campo manual -->
         <div class="right-buttons">
           <button class="btn ok"   onclick="adicionarManual()">➕ Adicionar</button>
           <button class="btn warn" onclick="diminuirManual()">➖ Subtrair</button>
@@ -335,6 +346,10 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
           <button class="btn"      onclick="abrirFeed(event)">💬 Chat</button>
         </div>
       </div>
+      <!-- /aside-head -->
+
+      <div class="title">Sugestões de preço</div>
+      <div id="precos"></div>
 
       <div id="total">
         <span>Total</span>
@@ -704,9 +719,10 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       if (dw > MAX_W) { const s = MAX_W / dw; dw = Math.max(1, Math.round(dw*s)); dh = Math.max(1, Math.round(dh*s)); }
       canvas.width = dw; canvas.height = dh;
 
-      if (ctx.filter !== undefined) ctx.filter = 'grayscale(1) contrast(115%)';
-      ctx.drawImage(video, roiX, roiY, roiWidth, roiHeight, 0, 0, dw, dh);
-      if (ctx.filter !== undefined) ctx.filter = 'none';
+      const ctx2d = canvas.getContext('2d');
+      if (ctx2d.filter !== undefined) ctx2d.filter = 'grayscale(1) contrast(115%)';
+      ctx2d.drawImage(video, roiX, roiY, roiWidth, roiHeight, 0, 0, dw, dh);
+      if (ctx2d.filter !== undefined) ctx2d.filter = 'none';
 
       try {
         const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
