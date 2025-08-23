@@ -313,9 +313,8 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
         </div>
       </div>
 
-      <!-- Linha 3: utilidades/ações -->
+      <!-- Linha 3: utilidades/ações (sem Apagar sugestões) -->
       <div class="row">
-        <button class="btn err" onclick="limparSugestoes()">❌ Apagar sugestões</button>
         <button class="btn" onclick="abrirHistorico(event)">📜 Histórico</button>
         <button class="btn" onclick="abrirFeed(event)">💬 Chat</button>
       </div>
@@ -398,9 +397,10 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
     let valoresAdicionados = [];
     let sugestoesFixas = false;
 
-    // OCR cooldown
+    // OCR cooldown / TTL
     let lastSuggestionsAt = 0;
     const SUGGESTIONS_COOLDOWN = 1200;
+    const SUGGESTIONS_TTL_MS   = 8000; // auto-expira em ~8s sem nova leitura
 
     // ROI
     const roi = { x:0, y:0, w:0, h:0 };
@@ -473,7 +473,10 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 
     /* ===== Controle OCR pausa/retoma ===== */
     let ocrPaused = false;
-    function pauseOCR(v){ ocrPaused = !!v; }
+    function pauseOCR(v){
+      ocrPaused = !!v;
+      if (ocrPaused) limparSugestoes(); // ao pausar, limpa sugestões para não “travar” visual
+    }
     document.addEventListener('visibilitychange', ()=>{ pauseOCR(document.hidden); });
 
     /* ===== Câmera com fallback (traseira prioritária) ===== */
@@ -631,7 +634,10 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       }
     }
 
-    function limparSugestoes() { precosDiv.innerHTML = ''; sugestoesFixas = false; }
+    function limparSugestoes() {
+      precosDiv.innerHTML = '';
+      sugestoesFixas = false;
+    }
 
     /* ===== Histórico UI ===== */
     function abrirHistorico(e){
@@ -716,6 +722,14 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       finally { isProcessing = false; }
     }
 
+    // Auto-expiração de sugestões (se nada novo chega por muito tempo)
+    setInterval(()=>{
+      const now = Date.now();
+      if (!ocrPaused && precosDiv.childElementCount > 0 && (now - lastSuggestionsAt > SUGGESTIONS_TTL_MS)) {
+        limparSugestoes();
+      }
+    }, 1000);
+
     /* ===== Chat/Feed ===== */
     const FEED_LIMIT = 200;
     let feed = []; // it: {type:'post'|'msg', ...}
@@ -792,6 +806,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
     async function abrirFeed(e){
       if (e) e.stopPropagation(); pauseOCR(true);
 
+      // opcional: sync cloud
       if (SYNC_TO_CLOUD) {
         try {
           const res = await fetch(`${API_BASE}/api/feed?deviceId=${encodeURIComponent(deviceId)}`);
