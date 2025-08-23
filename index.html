@@ -35,6 +35,12 @@
   --err:#ff7a7a;
 
   --shadow: 0 10px 28px rgba(6,12,32,0.40), inset 0 1px rgba(255,255,255,0.05);
+
+  /* Compactação da linha de 5 itens */
+  --action-font: clamp(12px, 1.2vw, 14px);
+  --action-pad-v: clamp(6px, 1vw, 8px);
+  --action-pad-h: clamp(8px, 1.2vw, 10px);
+  --control-min-h: 38px;
 }
 
 *{ box-sizing:border-box }
@@ -112,6 +118,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   display:flex; align-items:center; justify-content:center;
   transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, filter .12s ease;
   box-shadow: 0 6px 16px rgba(7,20,12,0.38);
+  white-space: nowrap;
 }
 .preco-btn:hover{ transform: translateY(-1px); box-shadow: 0 12px 26px rgba(7,20,12,0.45); filter: brightness(1.03); }
 .preco-btn.pulse{ transform: scale(1.04) }
@@ -121,7 +128,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   border:1px solid var(--card-border); background: rgba(10,14,32,0.55);
   color:var(--text); padding: 10px 12px; border-radius:12px; outline:none;
   transition: border-color .12s ease, box-shadow .12s ease, background .12s ease;
-  min-height:42px;
+  min-height:var(--control-min-h);
 }
 .input:focus-visible{
   border-color: rgba(127,180,255,0.65);
@@ -129,6 +136,11 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   background: rgba(10,14,32,0.65);
 }
 .input-qty{ text-align:center; }
+
+/* Remover setas do number (opcional) */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
+input[type=number]{ -moz-appearance:textfield; }
 
 /* Botões */
 .btn{
@@ -138,7 +150,8 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   padding:10px 12px; border-radius:12px; cursor:pointer;
   transition: transform .12s ease, background .12s ease, border-color .12s ease, box-shadow .12s ease, filter .12s ease;
   box-shadow: 0 6px 16px rgba(6,12,32,0.25);
-  min-height:42px;
+  min-height:var(--control-min-h);
+  white-space: nowrap;
 }
 .btn:hover{ transform: translateY(-1px); filter: brightness(1.03); }
 .btn:active{ transform: translateY(0); filter: brightness(0.98); }
@@ -176,26 +189,27 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 
 /* Grids das ações */
 .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+
+/* Linha de atalhos (➕/➖) */
 .manual-actions{
   display:grid;
   grid-template-columns: repeat(2, 1fr);
   gap:10px;
 }
+
+/* Linha única com 5 itens – SEM QUEBRA */
 .actions-grid-5{
   display:grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap:10px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap:8px;
   align-items:stretch;
 }
-.actions-grid-5 .input,
-.actions-grid-5 .btn{ width:100%; height:100%; }
-
-/* Responsivo: em telas estreitas, quebrar de forma elegante */
-@media (max-width:720px){
-  .actions-grid-5{ grid-template-columns: repeat(3, 1fr); }
-}
-@media (max-width:520px){
-  .actions-grid-5{ grid-template-columns: repeat(2, 1fr); }
+.actions-grid-5 > *{
+  min-width:0;
+  width:100%;
+  height:100%;
+  font-size: var(--action-font);
+  padding: var(--action-pad-v) var(--action-pad-h);
 }
 
 /* Total */
@@ -321,7 +335,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       <div class="actions-grid-5">
         <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor (ex: 0.77)">
         <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
-        <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
+        <button class="btn" onclick="multiplicarManual()">× Mult.</button>
         <button class="btn err" onclick="zerarTotal()">🧹 Zerar</button>
         <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer</button>
       </div>
