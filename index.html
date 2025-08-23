@@ -299,15 +299,15 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
         <button class="btn warn manual-btn" onclick="diminuirManual()" title="Subtrair valor">➖</button>
       </div>
 
-      <!-- Linha 2: grupo (Qtd + Multiplicar) -->
+      <!-- Linha 2: grupo (Qtd + Multiplicar + Zerar) -->
       <div class="row">
         <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
         <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
+        <button class="btn err" onclick="zerarTotal()">🧹 Zerar</button>
       </div>
 
       <!-- Linha 3: utilidades/ações -->
       <div class="row">
-        <button class="btn err" onclick="zerarTotal()">🧹 Zerar Total</button>
         <button class="btn err" onclick="limparSugestoes()">❌ Apagar sugestões</button>
         <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer último</button>
         <button class="btn" onclick="abrirHistorico(event)">📜 Histórico</button>
@@ -1187,4 +1187,3 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   </script>
 </body>
 </html>
-
