@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Smart Cart</title>
 
   <!-- OCR -->
@@ -67,7 +67,7 @@ header{
 .logo svg{ width:20px; height:20px; stroke:#ffffff; }
 h1{ font-size:18px; font-weight:700; margin:0; letter-spacing:.2px }
 
-/* Botão histórico (ícone, canto esquerdo) */
+/* Botão histórico no cabeçalho (ícone, canto esquerdo) */
 .icon-btn{
   position:absolute; left:12px; top:50%; transform:translateY(-50%);
   border:1px solid var(--card-border);
@@ -77,7 +77,7 @@ h1{ font-size:18px; font-weight:700; margin:0; letter-spacing:.2px }
   box-shadow: 0 6px 16px rgba(6,12,32,0.25);
   line-height:1; display:flex; align-items:center; justify-content:center;
 }
-.icon-btn:hover{ filter:brightness(1.03); transform:translateY(calc(-50% - 1px)); }
+.icon-btn:hover{ filter:brightness(1.03); transform:translateY(-50%) translateY(-1px); }
 .icon-btn:active{ filter:brightness(0.98); transform:translateY(-50%); }
 
 /* Layout principal */
@@ -103,24 +103,11 @@ main{
   position: relative; border-radius: 14px; overflow: hidden;
   border: 1px solid var(--card-border); background: rgba(0,0,0,0.28);
   aspect-ratio: 16/9; box-shadow: var(--shadow);
+  cursor: pointer;
 }
 @media (max-width:980px){ .videoWrap{ aspect-ratio:auto; height:56vh } }
 video{ width:100%; height:100%; object-fit:cover; display:block; }
 #overlay{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
-
-/* Botão iniciar câmera (overlay) */
-#startCamBtn{
-  position:absolute; inset:0; display:none; align-items:center; justify-content:center;
-  background: linear-gradient(180deg, rgba(10,14,32,0.55), rgba(10,14,32,0.35));
-  backdrop-filter: blur(6px);
-}
-#startCamBtn button{
-  border:1px solid var(--card-border);
-  background: linear-gradient(180deg, rgba(22,56,42,0.95), rgba(18,44,34,0.95));
-  color:#e8fff6; padding:12px 16px; border-radius:14px; cursor:pointer;
-  box-shadow: 0 10px 24px rgba(36,160,120,0.35);
-  font-weight:700; font-size:16px;
-}
 
 /* HUD */
 .hud{ position:absolute; left:10px; bottom:10px; display:flex; gap:8px; flex-wrap:wrap; }
@@ -138,7 +125,6 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
   font-size:1.08em; font-weight:700; padding:12px 14px;
   background: linear-gradient(180deg, rgba(26,44,32,0.95), rgba(18,33,24,0.92));
   color:#dfffee; border:1px solid rgba(72,140,92,0.55); border-radius:14px; cursor:pointer;
-  display:flex; align-items:center; justify-content:center;
   transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, filter .12s ease;
   box-shadow: 0 6px 16px rgba(7,20,12,0.38);
   white-space: nowrap;
@@ -178,9 +164,18 @@ input[type=number]{ -moz-appearance:textfield; }
 .btn:active{ transform: translateY(0); filter: brightness(0.98); }
 .btn:focus-visible{ outline:none; box-shadow: 0 0 0 3px rgba(127,180,255,0.25); }
 
-.btn.ok{  background: linear-gradient(180deg, rgba(22,56,42,0.95), rgba(18,44,34,0.95)); border-color: rgba(52,211,153,0.55); color:#e8fff6; }
-.btn.warn{background: linear-gradient(180deg, rgba(58,46,20,0.95), rgba(42,32,14,0.95)); border-color: rgba(245,197,106,0.55); color:#fff3da;}
-.btn.err{ background: linear-gradient(180deg, rgba(64,28,28,0.96), rgba(40,18,18,0.96)); border-color: rgba(255,122,122,0.55); color:#ffecec; }
+.btn.ok{
+  background: linear-gradient(180deg, rgba(22,56,42,0.95), rgba(18,44,34,0.95));
+  border-color: rgba(52,211,153,0.55); color:#e8fff6;
+}
+.btn.warn{
+  background: linear-gradient(180deg, rgba(58,46,20,0.95), rgba(42,32,14,0.95));
+  border-color: rgba(245,197,106,0.55); color:#fff3da;
+}
+.btn.err{
+  background: linear-gradient(180deg, rgba(64,28,28,0.96), rgba(40,18,18,0.96));
+  border-color: rgba(255,122,122,0.55); color:#ffecec;
+}
 
 /* Grids/linhas */
 .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
@@ -233,16 +228,37 @@ input[type=number]{ -moz-appearance:textfield; }
 .modal-title{ font-weight:700; letter-spacing:.3px }
 .modal-body{ overflow:auto; padding-top:10px; }
 
+/* ==== Rodapé do Feed (novo layout) ==== */
 .modal-foot{
   border-top:1px dashed var(--card-border);
   margin-top:10px; padding:10px;
   position:sticky; bottom:0; background:var(--card);
-  display:grid; grid-template-columns: 1fr auto auto; gap:8px; align-items:center;
+  display:grid; grid-template-columns: auto 1fr auto; gap:8px; align-items:center;
 }
-.foot-input{ flex:1; min-width:0; }
 @media (max-width:600px){
-  .modal-foot{ grid-template-columns: 1fr; }
-  .modal-foot .btn, .foot-input{ width:100%; justify-self:stretch; }
+  .modal-foot{ grid-template-columns: auto 1fr auto; }
+}
+.foot-input{
+  width:100%;
+  min-height:46px;
+  padding-right:44px; /* espaço para o botão enviar sobreposto se quisermos */
+}
+.icon-circle{
+  width:40px; height:40px; min-width:40px; min-height:40px;
+  border-radius:999px;
+  display:grid; place-items:center;
+  border:1px solid var(--card-border);
+  background: linear-gradient(180deg, rgba(14,20,42,0.85), rgba(10,16,34,0.85));
+  color:var(--text);
+  box-shadow: 0 4px 12px rgba(6,12,32,0.25);
+  cursor:pointer;
+  user-select:none;
+}
+.icon-circle:hover{ filter:brightness(1.05); transform: translateY(-1px); }
+.icon-circle:active{ filter:brightness(0.98); transform: translateY(0); }
+.icon-circle svg{
+  width:18px; height:18px;
+  stroke:#eaf1ff;
 }
 
 /* Histórico */
@@ -281,20 +297,16 @@ input[type=number]{ -moz-appearance:textfield; }
 }
 .msg-text{ white-space:pre-wrap; }
 .msg-meta{ font-size:12px; color:var(--muted); display:flex; gap:10px; align-items:center; }
-
-/* Aviso de HTTPS */
-#httpsWarn{
-  display:none; margin-top:8px; font-size:13px; color:#ffd7a0;
-  background: rgba(58,46,20,0.6); border:1px solid rgba(245,197,106,0.4);
-  padding:8px 10px; border-radius:10px;
-}
   </style>
 </head>
 <body>
   <!-- Header -->
   <header>
     <div class="wrap">
+      <!-- Ícone do Histórico (esquerda) -->
       <button class="icon-btn" onclick="abrirHistorico(event)" title="Histórico">📜</button>
+
+      <!-- Marca central -->
       <div class="brand">
         <div class="logo" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -316,18 +328,11 @@ input[type=number]{ -moz-appearance:textfield; }
       <div class="videoWrap" title="Toque para iniciar a câmera se necessário">
         <video id="video" autoplay playsinline muted></video>
         <canvas id="overlay"></canvas>
-
-        <!-- Botão para destravar câmera em navegadores que exigem gesto -->
-        <div id="startCamBtn">
-          <button onclick="userStartCamera()">▶️ Iniciar câmera</button>
-        </div>
-
         <div class="hud">
           <span class="tag">Mire a etiqueta dentro do retângulo (50% × 20%)</span>
         </div>
       </div>
-      <div id="httpsWarn">⚠️ Para a câmera funcionar, abra este app em <b>HTTPS</b> ou <b>localhost</b>.</div>
-      <div class="tip">A leitura ocorre automaticamente ~a cada 1,2s. Use a câmera traseira e mantenha a etiqueta bem enquadrada.</div>
+      <div class="tip">A leitura ocorre automaticamente ~a cada 1,2s. Use a câmera traseira e mantenha a etiqueta bem enquadrada. Toque na área da câmera se ela não iniciar automaticamente.</div>
     </section>
 
     <!-- Direita: sugestões + controles + total -->
@@ -348,6 +353,7 @@ input[type=number]{ -moz-appearance:textfield; }
         <button class="btn" onclick="multiplicarManual()">× Mult.</button>
         <button class="btn err" onclick="zerarTotal()">🧹 Zerar</button>
         <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer</button>
+        <!-- vazio para balancear o grid -->
       </div>
 
       <!-- Linha 3: utilidades -->
@@ -381,7 +387,7 @@ input[type=number]{ -moz-appearance:textfield; }
   <div id="feedModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="feedTitle">
     <div class="modal-card">
       <div class="modal-head">
-        <div class="modal-title" id="feedTitle"></div>
+        <div class="modal-title" id="feedTitle"><!-- título removido --></div>
         <div style="display:flex; gap:8px">
           <button class="btn" onclick="fecharFeed()">✖ Fechar</button>
         </div>
@@ -389,10 +395,33 @@ input[type=number]{ -moz-appearance:textfield; }
       <div class="modal-body" id="feedScroll">
         <div id="feedLista" class="feed"></div>
       </div>
+
+      <!-- Rodapé do feed (NOVO) -->
       <div class="modal-foot">
+        <!-- Ícone câmera (esquerda) -->
+        <button class="icon-circle" id="btnCam" title="Enviar foto" aria-label="Enviar foto" onclick="abrirPickerFoto()">
+          <!-- Ícone câmera (SVG) -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+        </button>
+
+        <!-- Campo de mensagem (meio) -->
         <input id="chatInput" class="input foot-input" type="text" placeholder="Escreva uma mensagem..." />
-        <button class="btn" onclick="abrirPickerFoto()">📷 Foto</button>
-        <button class="btn ok" onclick="enviarMensagem()">📨 Enviar</button>
+
+        <!-- Ícone enviar (direita) -->
+        <button class="icon-circle" id="btnSend" title="Enviar" aria-label="Enviar mensagem" onclick="enviarMensagem()">
+          <!-- Ícone 'aviãozinho' / seta de envio -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M22 2L11 13"></path>
+            <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
+          </svg>
+        </button>
+
+        <!-- Picker de foto oculto -->
         <input id="photoInput" type="file" accept="image/*" capture="environment" style="display:none" />
       </div>
     </div>
@@ -418,16 +447,9 @@ input[type=number]{ -moz-appearance:textfield; }
     /* ===== Câmera / elementos ===== */
     const video = document.getElementById('video');
     const overlay = document.getElementById('overlay');
-    const startCamBtnWrap = document.getElementById('startCamBtn');
-    const httpsWarn = document.getElementById('httpsWarn');
     const precosDiv = document.getElementById('precos');
     const somaSpan = document.getElementById('soma');
     const bip = document.getElementById('bip-audio');
-
-    // HTTPS aviso
-    if (!(location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')){
-      httpsWarn.style.display = 'block';
-    }
 
     /* ===== Histórico sessão ===== */
     const historico = []; // {tipo:'add'|'sub', valor, data, total}
@@ -509,50 +531,30 @@ input[type=number]{ -moz-appearance:textfield; }
       loadFeed();
     }
 
-    /* ===== OCR pausa/retoma ===== */
+    /* ===== Config de envio automático ===== */
+    const shareToChat = true;
+    function mapsRoute(lat, lng){ return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`; }
+
+    /* ===== Controle OCR pausa/retoma ===== */
     let ocrPaused = false;
     function pauseOCR(v){
       ocrPaused = !!v;
       if (ocrPaused) limparSugestoes();
     }
-    document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) ensureCamera(); pauseOCR(document.hidden); });
+    document.addEventListener('visibilitychange', ()=>{ pauseOCR(document.hidden); });
 
     /* ===== Câmera com fallback (traseira prioritária) ===== */
     let currentStream = null;
 
-    function isStreamActive(){
-      const s = video.srcObject;
-      if (!s) return false;
-      const tracks = s.getVideoTracks ? s.getVideoTracks() : [];
-      return !!(s.active && tracks.length && tracks[0].readyState === 'live');
-    }
-
     async function startWithConstraints(constraints){
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      stopCurrentStream();
+      if (currentStream){ currentStream.getTracks().forEach(t => t.stop()); }
       currentStream = stream;
       video.srcObject = stream;
-
-      // iOS/Safari: garantir inline + play
-      try{
-        video.setAttribute('playsinline','');
-        video.playsInline = true;
-        video.muted = true;
-        await video.play().catch(()=>{});
-      }catch(e){}
-
       video.onloadedmetadata = () => { syncOverlayToVideo(); desenharROI(); };
       window.addEventListener('resize', syncOverlayToVideo);
       window.addEventListener('orientationchange', syncOverlayToVideo);
-
-      hideStartOverlayIfActive();
       return stream;
-    }
-
-    function stopCurrentStream(){
-      if (currentStream){
-        currentStream.getTracks().forEach(t => t.stop());
-      }
     }
 
     function looksLikeBackLabel(label){
@@ -579,58 +581,69 @@ input[type=number]{ -moz-appearance:textfield; }
       try{
         await startWithConstraints({ video: { facingMode: { exact: 'environment' } }, audio:false });
         await trySwitchToRearByDeviceId();
-        return true;
+        return;
       }catch(e){ lastErr = e; }
 
       try{
         await startWithConstraints({ video: { facingMode: { ideal: 'environment' } }, audio:false });
         await trySwitchToRearByDeviceId();
-        return true;
+        return;
       }catch(e){ lastErr = e; }
 
       try{
         await startWithConstraints({ video: true, audio:false });
         await trySwitchToRearByDeviceId();
-        return true;
+        return;
       }catch(e){ lastErr = e; }
 
       try{
         await startWithConstraints({ video: true, audio:false });
-        return true;
+        return;
       }catch(e){ lastErr = e; }
 
       console.warn("Não foi possível iniciar a câmera:", lastErr);
-      showStartOverlay(); // pede gesto
-      return false;
     }
 
+    // Reforços pra garantir a câmera ligada
     async function ensureCamera(){
       try{
-        if (!isStreamActive()){
-          const ok = await iniciarCamera();
-          if (!ok) showStartOverlay();
+        if (!video.srcObject || !video.srcObject.active || video.readyState < 2){
+          await iniciarCamera();
         } else {
-          hideStartOverlayIfActive();
+          const tracks = video.srcObject.getVideoTracks();
+          if (!tracks.length || tracks[0].readyState === 'ended'){
+            await iniciarCamera();
+          }
         }
       }catch(e){
-        showStartOverlay();
+        // silencia tentativa; alguns navegadores exigem gesto
       }
     }
 
-    function showStartOverlay(){ startCamBtnWrap.style.display = 'flex'; }
-    function hideStartOverlayIfActive(){ if (isStreamActive()) startCamBtnWrap.style.display = 'none'; }
-
-    async function userStartCamera(){
-      // gesto do usuário – chamar diretamente
-      await ensureCamera();
+    // Alguns browsers (ex: Safari iOS) exigem gesto do usuário
+    function bindCameraAutostart(){
+      const wrap = document.querySelector('.videoWrap');
+      if (!wrap) return;
+      const handler = async () => {
+        await ensureCamera();
+      };
+      wrap.addEventListener('click', handler);
+      wrap.addEventListener('touchstart', handler, { passive:true });
     }
 
-    // Recover em eventos do ambiente
-    navigator.mediaDevices && navigator.mediaDevices.addEventListener && navigator.mediaDevices.addEventListener('devicechange', ensureCamera);
+    // Pingar de tempos em tempos pra reativar se cair
+    setInterval(ensureCamera, 4000);
     window.addEventListener('focus', ensureCamera);
 
-    // Ping periódico (agressivo o suficiente)
-    setInterval(ensureCamera, 3000);
+    // Permissões (quando disponível)
+    (async ()=>{
+      try{
+        if (navigator.permissions && navigator.permissions.query){
+          const res = await navigator.permissions.query({ name: 'camera' });
+          res.onchange = ()=>{ if (res.state === 'granted') ensureCamera(); };
+        }
+      }catch(e){}
+    })();
 
     /* ===== Somatório ===== */
     function adicionarPreco(valor, btn) {
@@ -1023,8 +1036,6 @@ input[type=number]{ -moz-appearance:textfield; }
       if (stick) jumpToBottom();
     }
 
-    function mapsRoute(lat, lng){ return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`; }
-
     function sharePost(p){
       const precoTxt = (typeof p.valor === 'number' && isFinite(p.valor) && p.valor > 0) ? `Oferta: R$ ${Number(p.valor).toFixed(2)}\n` : '';
       const text = `${precoTxt}${p.coords ? `Mapa: ${mapsRoute(p.coords.lat, p.coords.lng)}` : ''}`.trim();
@@ -1074,6 +1085,15 @@ input[type=number]{ -moz-appearance:textfield; }
         );
       } else add(null);
     }
+
+    // Enter para enviar
+    document.addEventListener('keydown', (e)=>{
+      const input = document.getElementById('chatInput');
+      if (document.activeElement === input && e.key === 'Enter'){
+        e.preventDefault();
+        enviarMensagem();
+      }
+    });
 
     /* ===== Botão de foto no feed ===== */
     function abrirPickerFoto(){
@@ -1205,6 +1225,16 @@ input[type=number]{ -moz-appearance:textfield; }
             });
             renderFeed();
             maybeJumpToBottom();
+
+            if (SYNC_TO_CLOUD) {
+              try {
+                await fetch(`${API_BASE}/api/post`, {
+                  method: 'POST',
+                  headers: { 'Content-Type':'application/json' },
+                  body: JSON.stringify({ deviceId, valor:+valor, coords, imageData:imageThumb })
+                });
+              } catch(e){ console.warn('cloud post erro:', e); }
+            }
           }, async () => {
             pushFeed({
               type:'post',
@@ -1220,6 +1250,16 @@ input[type=number]{ -moz-appearance:textfield; }
             });
             renderFeed();
             maybeJumpToBottom();
+
+            if (SYNC_TO_CLOUD) {
+              try {
+                await fetch(`${API_BASE}/api/post`, {
+                  method: 'POST',
+                  headers: { 'Content-Type':'application/json' },
+                  body: JSON.stringify({ deviceId, valor:+valor, coords:null, imageData:imageThumb })
+                });
+              } catch(e){ console.warn('cloud post erro:', e); }
+            }
           }, { enableHighAccuracy:true, timeout:7000 });
         }
       } catch (e) {
@@ -1227,27 +1267,14 @@ input[type=number]{ -moz-appearance:textfield; }
       }
     }
 
-    /* ===== Inicialização ===== */
+    // ===== Inicialização =====
     setInterval(capturarImagemEProcessar, 1200);
-
-    async function boot(){
-      // tentar ligar sozinho
+    (async ()=>{
       await ensureCamera();
-
-      // se ainda não ativo, mostrar botão
-      if (!isStreamActive()) showStartOverlay();
-
-      // clique/touch no vídeo também tenta
-      const wrap = document.querySelector('.videoWrap');
-      if (wrap){
-        const handler = async ()=>{ await userStartCamera(); };
-        wrap.addEventListener('click', handler);
-        wrap.addEventListener('touchstart', handler, { passive:true });
-      }
-    }
+      bindCameraAutostart();
+    })();
 
     loadState();
-    boot();
   </script>
 </body>
 </html>
