@@ -248,27 +248,24 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
 .msg-text{ white-space:pre-wrap; }
 .msg-meta{ font-size:12px; color:var(--muted); display:flex; gap:10px; align-items:center; }
 
-/* ===== Linha ➕ / ➖ (sem input) ===== */
-.manual-actions{
-  display:grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap:10px;
-}
+/* ===== Ajuste: input manual entre ➕ e ➖ ===== */
+.manual-group{ display:flex; align-items:center; gap:8px; width:100%; }
+.manual-group .input{ flex:1; text-align:center; }
+.manual-btn{ flex:0 0 54px; padding:10px; font-size:1.1em; font-weight:bold; }
 
-/* ===== Linha única com 5 elementos em espaços iguais =====
-   [ Valor ] [ Qtd. ] [ × Multiplicar ] [ 🧹 Zerar ] [ ↩️ Desfazer ] */
-.actions-grid-5{
+/* ===== Linha única com 4 elementos em espaços iguais ===== */
+.actions-grid{
   display:grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap:10px;
   align-items:stretch;
 }
-.actions-grid-5 .input,
-.actions-grid-5 .btn{ width:100%; height:100%; }
+.actions-grid .input,
+.actions-grid .btn{ width:100%; height:100%; }
 
-/* Responsivo: em telas estreitas, quebra em 2 colunas */
-@media (max-width:560px){
-  .actions-grid-5{ grid-template-columns: repeat(2, 1fr); }
+/* Responsivo (opcional): em telas muito estreitas, quebra em 2x2 */
+@media (max-width:420px){
+  .actions-grid{ grid-template-columns: repeat(2, 1fr); }
 }
   </style>
 </head>
@@ -309,22 +306,22 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       <div class="title">Sugestões de preço</div>
       <div id="precos"></div>
 
-      <!-- Linha 1: ações rápidas (➕ / ➖) usando o mesmo campo "Valor" da linha abaixo -->
-      <div class="manual-actions">
-        <button class="btn ok" onclick="adicionarManual()" title="Somar valor">➕ Adicionar</button>
-        <button class="btn warn" onclick="diminuirManual()" title="Subtrair valor">➖ Subtrair</button>
+      <!-- Linha 1: valor manual com ➕ (esq) [input] ➖ (dir) -->
+      <div class="manual-group">
+        <button class="btn ok manual-btn" onclick="adicionarManual()" title="Somar valor">➕</button>
+        <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor unitário (ex: 0.77)">
+        <button class="btn warn manual-btn" onclick="diminuirManual()" title="Subtrair valor">➖</button>
       </div>
 
-      <!-- Linha 2: TUDO junto com o mesmo espaço -->
-      <div class="actions-grid-5">
-        <input id="manualInput" class="input" type="number" step="0.01" placeholder="Valor (ex: 0.77)">
+      <!-- Linha 2: [ Qtd. | × Multiplicar | 🧹 Zerar | ↩️ Desfazer ] com espaço igual -->
+      <div class="actions-grid">
         <input id="qtyInput" class="input input-qty" type="number" step="1" min="1" value="2" placeholder="Qtd.">
         <button class="btn" onclick="multiplicarManual()">× Multiplicar</button>
         <button class="btn err" onclick="zerarTotal()">🧹 Zerar</button>
         <button class="btn warn" onclick="desfazerUltimo()">↩️ Desfazer</button>
       </div>
 
-      <!-- Linha 3: utilidades/ações -->
+      <!-- Linha 3: utilidades/ações (sem “Apagar sugestões”) -->
       <div class="row">
         <button class="btn" onclick="abrirHistorico(event)">📜 Histórico</button>
         <button class="btn" onclick="abrirFeed(event)">💬 Chat</button>
@@ -584,7 +581,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
       let qtd = parseInt(qtyEl.value, 10);
 
       if (isNaN(valor) || valor <= 0){
-        alert('Digite primeiro um valor válido em "Valor".');
+        alert('Digite primeiro um valor unitário válido.');
         input.focus();
         return;
       }
@@ -604,24 +601,26 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
     function adicionarManual() {
       const input = document.getElementById('manualInput');
       const valor = parseFloat((input.value || '').replace(',', '.'));
-      if (isNaN(valor) || valor <= 0) { alert("Digite um valor válido em 'Valor'."); input.focus(); return; }
+      if (isNaN(valor) || valor <= 0) { alert("Digite um valor válido."); input.value=''; input.focus(); return; }
       total += valor; valoresAdicionados.push(valor);
       somaSpan.innerText = total.toFixed(2);
       limparSugestoes(); sugestoesFixas = false; bip.play();
       registrar('add', valor);
       saveState();
+      input.value=''; input.blur();
     }
 
     function diminuirManual() {
       const input = document.getElementById('manualInput');
       const valor = parseFloat((input.value || '').replace(',', '.'));
-      if (isNaN(valor) || valor <= 0) { alert("Digite um valor válido em 'Valor'."); input.focus(); return; }
+      if (isNaN(valor) || valor <= 0) { alert("Digite um valor válido."); input.value=''; input.focus(); return; }
       total -= valor; if (total < 0) total = 0;
       valoresAdicionados.push(-valor);
       somaSpan.innerText = total.toFixed(2);
       limparSugestoes(); sugestoesFixas = false; bip.play();
       registrar('sub', valor);
       saveState();
+      input.value=''; input.blur();
     }
 
     function zerarTotal() {
@@ -809,8 +808,7 @@ video{ width:100%; height:100%; object-fit:cover; display:block; }
     }
     function maybeJumpToBottom(){
       const scroller = getFeedScroller();
-      if (isNearBottom(scr
-) jumpToBottom();
+      if (isNearBottom(scroller)) jumpToBottom();
     }
 
     async function abrirFeed(e){
